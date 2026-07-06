@@ -1,0 +1,9 @@
+[project]
+name = "token-monitor"
+version = "0.1.0"
+description = "監控 Claude 和 Codex 訂閱額度(5 小時 / 每週視窗)的手機可看網頁儀表板"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.uv]
+package = false

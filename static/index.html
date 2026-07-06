@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Token Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e1015;
+    --card: #171a21;
+    --card-border: #262b36;
+    --text: #eef0f4;
+    --muted: #9096a3;
+    --track: #262b36;
+    --ok: #4bcf8a;
+    --warn: #eeb340;
+    --danger: #ef6a5e;
+    --claude: #e08862;
+    --codex: #6fcab8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Outfit", -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+             calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    max-width: 900px; margin: 0 auto;
+  }
+  .cards { display: flex; flex-direction: column; }
+  .layout { display: contents; }
+
+  header { margin-bottom: 18px; }
+  h1 { font-size: 21px; font-weight: 700; letter-spacing: -.3px; }
+  .chart-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+  #updated { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #refresh {
+    background: var(--card); color: var(--text); border: 1px solid var(--card-border);
+    width: 32px; height: 32px; border-radius: 50%; padding: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex: none;
+    transition: transform .15s ease, background .2s ease, border-color .2s ease;
+  }
+  #refresh:hover { background: #1d212a; border-color: #313747; }
+  #refresh:active { transform: scale(.9); }
+  #refresh svg { width: 15px; height: 15px; }
+  #refresh.spinning svg { animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 10px 30px -14px rgba(0,0,0,.6);
+    border-radius: 18px; padding: 18px; margin-bottom: 14px;
+  }
+  .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .card-head .name { font-size: 17px; font-weight: 600; letter-spacing: -.2px; flex: 1; }
+  .plan {
+    font-size: 10px; color: var(--muted); border: 1px solid var(--card-border);
+    padding: 3px 9px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: .6px;
+  }
+  .win { margin-bottom: 14px; }
+  .win:last-child { margin-bottom: 0; }
+  .win-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .win-label { font-size: 13px; color: var(--muted); }
+  .win-pct { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.3px; }
+  .bar { height: 9px; background: var(--track); border-radius: 999px; overflow: hidden; }
+  .bar > div { height: 100%; border-radius: 999px; transition: width .6s cubic-bezier(.3,0,.2,1); }
+  .win-reset { font-size: 12px; color: var(--muted); margin-top: 5px; font-variant-numeric: tabular-nums; }
+  .error { color: var(--danger); font-size: 14px; line-height: 1.6; }
+  .chart-card h2 { font-size: 14px; color: var(--muted); font-weight: 500; }
+  .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .range-btns { display: flex; gap: 6px; margin-bottom: 10px; }
+  .range-btns button {
+    background: none; border: 1px solid var(--card-border); color: var(--muted);
+    border-radius: 999px; padding: 5px 12px; font-size: 12px; font-family: inherit; cursor: pointer;
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+  }
+  .range-btns button:hover { border-color: #313747; color: var(--text); }
+  .range-btns button.active { color: var(--text); background: #1d212a; border-color: #3a4152; }
+  #chart { width: 100%; height: 160px; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .skeleton { color: var(--muted); font-size: 14px; }
+
+  /* 手機橫式:三張卡片(Claude / Codex / 趨勢圖)全部塞進一個畫面,不捲動 */
+  @media (orientation: landscape) and (max-height: 500px) {
+    body {
+      max-width: none; display: flex; flex-direction: column;
+      height: 100%; overflow: hidden;
+      padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+               max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+    header { display: none; }
+    #updated { font-size: 10px; }
+    #refresh { width: 24px; height: 24px; }
+    #refresh svg { width: 11px; height: 11px; }
+    .layout {
+      display: flex; flex-direction: column; gap: 8px;
+      flex: 1; min-height: 0;
+    }
+    .cards { flex-direction: row; flex: none; gap: 10px; margin-bottom: 0; min-height: 0; align-items: stretch; }
+    .card { padding: 10px 16px; margin-bottom: 0; border-radius: 14px; min-height: 0; }
+    .cards .card { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
+    .card-head { margin-bottom: 7px; }
+    .card-head .name { font-size: 16px; }
+    .dot { width: 9px; height: 9px; }
+    .plan { font-size: 10px; padding: 2px 8px; }
+    .win { margin-bottom: 7px; }
+    .win:last-child { margin-bottom: 0; }
+    .win-row { margin-bottom: 4px; }
+    .win-label { font-size: 12px; }
+    .win-pct { font-size: 18px; }
+    .bar { height: 8px; }
+    .win-reset { font-size: 11px; margin-top: 3px; line-height: 1.2; }
+    .chart-card {
+      flex: 1; margin-bottom: 0;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .chart-head { margin-bottom: 3px; flex: none; }
+    .chart-card h2 { font-size: 11px; }
+    .chart-actions { gap: 6px; }
+    .range-btns { margin-bottom: 3px; }
+    .range-btns button { padding: 2px 7px; font-size: 10px; }
+    #chart { flex: 1; min-height: 0; height: auto; }
+    .legend { flex: none; margin-top: 3px; font-size: 10px; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Token Monitor</h1>
+</header>
+
+<div class="layout">
+  <div class="cards">
+    <div class="card" id="card-claude">
+      <div class="card-head">
+        <span class="dot" style="background: var(--claude); color: var(--claude)"></span>
+        <span class="name">Claude</span>
+        <span class="plan" id="plan-claude"></span>
+      </div>
+      <div id="body-claude" class="skeleton">讀取中…</div>
+    </div>
+
+    <div class="card" id="card-codex">
+      <div class="card-head">
+        <span class="dot" style="background: var(--codex); color: var(--codex)"></span>
+        <span class="name">Codex</span>
+        <span class="plan" id="plan-codex"></span>
+      </div>
+      <div id="body-codex" class="skeleton">讀取中…</div>
+    </div>
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-head">
+      <h2>用量趨勢（5 小時視窗）</h2>
+      <div class="chart-actions">
+        <span id="updated">載入中…</span>
+        <button id="refresh" aria-label="刷新" title="刷新">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 0 1 15.3-6.4M21 12a9 9 0 0 1-15.3 6.4"/>
+            <path d="M17.6 3.6v4.4H13.2M6.4 20.4V16H10.8"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="range-btns">
+      <button data-hours="24" class="active">24h</button>
+      <button data-hours="168">7 天</button>
+    </div>
+    <svg id="chart" preserveAspectRatio="none"></svg>
+    <div class="legend">
+      <span><i style="background: var(--claude)"></i>Claude 5h</span>
+      <span><i style="background: var(--codex)"></i>Codex 5h</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let chartHours = 24;
+
+function barColor(p) {
+  return p >= 85 ? 'var(--danger)' : p >= 60 ? 'var(--warn)' : 'var(--ok)';
+}
+
+function fmtCountdown(resetsAt) {
+  if (!resetsAt) return '';
+  const s = resetsAt - Math.floor(Date.now() / 1000);
+  if (s <= 0) return '即將重置';
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  const t = new Date(resetsAt * 1000);
+  const clock = t.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+  let left = d > 0 ? `${d} 天 ${h} 小時` : h > 0 ? `${h} 小時 ${m} 分` : `${m} 分`;
+  return `重置:${clock}（剩 ${left}）`;
+}
+
+function renderProvider(name, data) {
+  const body = $('body-' + name), plan = $('plan-' + name);
+  if (!data) { body.className = 'skeleton'; body.textContent = '尚無資料'; return; }
+  if (!data.ok) {
+    body.className = 'error';
+    body.textContent = '⚠ ' + (data.error || '讀取失敗');
+    plan.textContent = '';
+    return;
+  }
+  plan.textContent = data.plan || '';
+  body.className = '';
+  body.innerHTML = data.windows.map(w => `
+    <div class="win">
+      <div class="win-row">
+        <span class="win-label">${w.label}</span>
+        <span class="win-pct" style="color:${barColor(w.used_percent)}">${w.used_percent}%</span>
+      </div>
+      <div class="bar"><div style="width:${Math.min(w.used_percent, 100)}%;background:${barColor(w.used_percent)}"></div></div>
+      <div class="win-reset">${fmtCountdown(w.resets_at)}</div>
+    </div>`).join('');
+}
+
+async function load(fresh) {
+  try {
+    const r = await fetch('/api/usage' + (fresh ? '?fresh=1' : ''));
+    const d = await r.json();
+    renderProvider('claude', d.claude);
+    renderProvider('codex', d.codex);
+    if (d.updated_at) {
+      $('updated').textContent = '更新於 ' + new Date(d.updated_at * 1000)
+        .toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    }
+  } catch (e) {
+    $('updated').textContent = '⚠ 連不上伺服器';
+  }
+}
+
+async function loadChart() {
+  const r = await fetch('/api/history?hours=' + chartHours);
+  const hist = await r.json();
+  const svg = $('chart');
+  const W = svg.clientWidth || 500, H = svg.clientHeight || 160, PAD = 4;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const now = Math.floor(Date.now() / 1000), since = now - chartHours * 3600;
+  const series = [
+    ['claude:5h', getComputedStyle(document.documentElement).getPropertyValue('--claude')],
+    ['codex:5h', getComputedStyle(document.documentElement).getPropertyValue('--codex')],
+  ];
+  let out = '';
+  for (const gy of [25, 50, 75]) {
+    const y = H - PAD - (H - 2 * PAD) * gy / 100;
+    out += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="4 4"/>`;
+  }
+  for (const [key, color] of series) {
+    const pts = (hist[key] || []).filter(p => p[0] >= since);
+    if (!pts.length) continue;
+    const path = pts.map((p, i) => {
+      const x = PAD + (W - 2 * PAD) * (p[0] - since) / (chartHours * 3600);
+      const y = H - PAD - (H - 2 * PAD) * Math.min(p[1], 100) / 100;
+      return (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    out += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+  }
+  svg.innerHTML = out;
+}
+
+document.querySelectorAll('.range-btns button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.range-btns button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  chartHours = +b.dataset.hours;
+  loadChart();
+});
+$('refresh').onclick = () => {
+  const btn = $('refresh');
+  btn.classList.add('spinning');
+  $('updated').textContent = '刷新中…';
+  load(true).then(loadChart).finally(() => btn.classList.remove('spinning'));
+};
+
+load(true).then(loadChart);
+setInterval(() => load(false), 60000);
+setInterval(loadChart, 300000);
+</script>
+</body>
+</html>
