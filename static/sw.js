@@ -1,7 +1,7 @@
 // Token Monitor service worker:
 // 靜態外殼 cache-first(離線可開頁),API 一律 network-first(資料要新鮮,
 // 斷線時回退到最後一次成功的快取,讓離線也看得到上次的數字)。
-const CACHE = 'token-monitor-v1';
+const CACHE = 'token-monitor-v2';
 const SHELL = [
   '/',
   '/manifest.json',
