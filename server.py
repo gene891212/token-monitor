@@ -29,7 +29,7 @@ POLL_SECONDS = 300          # 背景輪詢間隔(研究顯示 180s 以上安全)
 MIN_FETCH_INTERVAL = 60     # 手動刷新最短間隔
 
 CLAUDE_KEYCHAIN_SERVICE = "Claude Code-credentials"
-# Windows Credential Manager 的 target name 未經實機驗證,依序嘗試常見候選;
+# Windows 優先讀 ~/.claude/.credentials.json,並相容舊版 Credential Manager target;
 # 若都失敗,用 `set TOKEN_MONITOR_CLAUDE_CRED_TARGET=實際名稱` 覆寫
 # (可在「認證管理員」→ Windows 認證 裡搜尋 claude 找到正確名稱)。
 CLAUDE_WIN_CRED_TARGETS = [os.environ.get("TOKEN_MONITOR_CLAUDE_CRED_TARGET")] if os.environ.get(
@@ -37,7 +37,7 @@ CLAUDE_WIN_CRED_TARGETS = [os.environ.get("TOKEN_MONITOR_CLAUDE_CRED_TARGET")] i
     "Claude Code-credentials",
     "Claude Code",
 ]
-CLAUDE_LINUX_CREDS_PATH = os.path.expanduser("~/.claude/.credentials.json")
+CLAUDE_FILE_CREDS_PATH = os.path.expanduser("~/.claude/.credentials.json")
 CLAUDE_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 CLAUDE_UA = "claude-code/2.0.14"
 CLAUDE_FALLBACK_CREDS = os.path.join(DATA_DIR, "claude_oauth.json")
@@ -76,7 +76,7 @@ def http_json(method, url, headers=None, body=None, form=None, timeout=20):
 # ---------------------------------------------------------------- Claude ----
 # 三個平台的憑證存放位置不同:
 #   macOS   → Keychain(`security` 指令)
-#   Windows → Windows Credential Manager(ctypes 呼叫 advapi32 CredRead/CredWrite)
+#   Windows → ~/.claude/.credentials.json,舊版回退 Credential Manager
 #   Linux   → ~/.claude/.credentials.json(明碼檔案,官方本來就這樣存)
 
 def _mac_read_keychain():
@@ -170,12 +170,16 @@ def claude_read_creds():
         if OS_NAME == "Darwin":
             creds = _mac_read_keychain()
         elif OS_NAME == "Windows":
-            _, blob = _win_credread()
-            if blob:
-                creds = json.loads(blob)
+            if os.path.exists(CLAUDE_FILE_CREDS_PATH):
+                with open(CLAUDE_FILE_CREDS_PATH, encoding="utf-8") as f:
+                    creds = json.load(f)
+            else:
+                _, blob = _win_credread()
+                if blob:
+                    creds = json.loads(blob)
         else:  # Linux
-            if os.path.exists(CLAUDE_LINUX_CREDS_PATH):
-                with open(CLAUDE_LINUX_CREDS_PATH) as f:
+            if os.path.exists(CLAUDE_FILE_CREDS_PATH):
+                with open(CLAUDE_FILE_CREDS_PATH, encoding="utf-8") as f:
                     creds = json.load(f)
     except Exception:
         pass
@@ -197,10 +201,17 @@ def claude_write_creds(creds):
         if OS_NAME == "Darwin":
             wrote_back = _mac_write_keychain(blob)
         elif OS_NAME == "Windows":
-            target, _ = _win_credread()
-            wrote_back = _win_credwrite(target or CLAUDE_WIN_CRED_TARGETS[0], blob)
+            if os.path.exists(CLAUDE_FILE_CREDS_PATH):
+                tmp = CLAUDE_FILE_CREDS_PATH + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as f:
+                    f.write(blob)
+                os.replace(tmp, CLAUDE_FILE_CREDS_PATH)
+                wrote_back = True
+            else:
+                target, _ = _win_credread()
+                wrote_back = _win_credwrite(target or CLAUDE_WIN_CRED_TARGETS[0], blob)
         else:  # Linux
-            fd = os.open(CLAUDE_LINUX_CREDS_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            fd = os.open(CLAUDE_FILE_CREDS_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
             with os.fdopen(fd, "w") as f:
                 f.write(blob)
             wrote_back = True

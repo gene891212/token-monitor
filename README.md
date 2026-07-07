@@ -5,6 +5,14 @@
 
 額度是**帳號層級**共用的,所以就算主要用桌面版 App,這裡顯示的數字就是你實際的剩餘額度。
 
+## 登入需求
+
+- **Claude:**必須先安裝 Claude Code CLI 並完成登入。Token Monitor 目前只讀取 Claude Code
+  的 OAuth 憑證,不會讀取 Claude Desktop 的登入資料。查到的是帳號共用額度,因此仍包含
+  Claude Desktop、網頁版與 Claude Code 的使用量,但無法區分各來源。
+- **Codex:**Codex Desktop App 或 Codex CLI 任一端完成登入即可,兩者共用
+  `~/.codex/auth.json`。查到的同樣是帳號共用額度,無法區分 Desktop 與 CLI 的使用量。
+
 ## 啟動
 
 專案用 [uv](https://docs.astral.sh/uv/) 管理,不用手動建 virtualenv 或裝套件
@@ -53,7 +61,7 @@ schtasks /delete /tn "TokenMonitor" /f
 
 | 來源 | 憑證位置 | 端點 |
 |---|---|---|
-| Claude | macOS:Keychain 的 `Claude Code-credentials`;Windows:Windows Credential Manager;Linux:`~/.claude/.credentials.json` | `api.anthropic.com/api/oauth/usage`(非公開端點,即 Claude Code `/usage` 指令的資料來源) |
+| Claude | macOS:Keychain 的 `Claude Code-credentials`;Windows / Linux:`~/.claude/.credentials.json`(Windows 另相容舊版 Credential Manager) | `api.anthropic.com/api/oauth/usage`(非公開端點,即 Claude Code `/usage` 指令的資料來源) |
 | Codex | `~/.codex/auth.json`(三平台格式一致,Windows 為 `%USERPROFILE%\.codex\auth.json`) | `chatgpt.com/backend-api/wham/usage`(Codex `/status` 的資料來源) |
 
 ### Windows 注意事項
