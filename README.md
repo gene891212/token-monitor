@@ -26,7 +26,19 @@ uv run server.py
 
 - 本機打開 <http://localhost:8787>
 - 手機(同一個 Wi-Fi)打開 `http://<這台電腦的區網 IP>:8787`,啟動時終端機會印出網址
-- 手機上可用 Safari / Chrome「加入主畫面」變成類 App 的體驗
+
+## PWA(加入主畫面)
+
+已內建 Web App Manifest、圖示與 service worker:
+
+- **iOS Safari:**分享 →「加入主畫面」,會有獨立圖示、全螢幕開啟(無網址列)。
+- **Android Chrome:**選單 →「加入主畫面」。
+- **離線行為:**斷線時仍可開啟頁面,顯示最後一次成功抓到的數字。
+
+注意:service worker 需要 secure context——`localhost` 可以,但手機透過
+`http://<區網 IP>` 開啟時瀏覽器會跳過 SW 註冊(加入主畫面與全螢幕不受影響,
+只是沒有離線快取)。要在手機上啟用完整離線功能,需要另外套 HTTPS(例如
+Tailscale Serve 或 mkcert + 反向代理)。
 
 ## 開機自動啟動
 

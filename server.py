@@ -537,12 +537,29 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    STATIC_TYPES = {
+        ".html": "text/html; charset=utf-8",
+        ".js": "application/javascript; charset=utf-8",
+        ".json": "application/manifest+json; charset=utf-8",
+        ".png": "image/png",
+    }
+
+    def _send_static(self, rel):
+        full = os.path.realpath(os.path.join(STATIC_DIR, rel))
+        if not full.startswith(os.path.realpath(STATIC_DIR) + os.sep) or not os.path.isfile(full):
+            self._send(404, {"error": "not found"})
+            return
+        ctype = self.STATIC_TYPES.get(os.path.splitext(full)[1], "application/octet-stream")
+        with open(full, "rb") as f:
+            self._send(200, f.read(), ctype)
+
     def do_GET(self):
         path, _, query = self.path.partition("?")
         params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
         if path == "/":
-            with open(os.path.join(STATIC_DIR, "index.html"), "rb") as f:
-                self._send(200, f.read(), "text/html; charset=utf-8")
+            self._send_static("index.html")
+        elif path in ("/manifest.json", "/sw.js") or path.startswith("/icons/"):
+            self._send_static(path.lstrip("/"))
         elif path == "/api/usage":
             if params.get("fresh") == "1":
                 self._send(200, monitor.maybe_fetch())
