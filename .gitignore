@@ -12,6 +12,9 @@ wheels/
 # Runtime data (usage history, cached credentials)
 data/
 
+# TLS certs and private keys (regenerate with gen_certs.py)
+certs/
+
 # OS / local editor junk
 .DS_Store
 

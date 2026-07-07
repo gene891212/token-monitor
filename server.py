@@ -19,10 +19,12 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("TOKEN_MONITOR_PORT", "8787"))
+TLS_PORT = int(os.environ.get("TOKEN_MONITOR_TLS_PORT", "8788"))
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE, "data")
 DB_PATH = os.path.join(DATA_DIR, "history.db")
 STATIC_DIR = os.path.join(BASE, "static")
+CERT_DIR = os.path.join(BASE, "certs")
 OS_NAME = platform.system()  # "Darwin" / "Windows" / "Linux"
 
 POLL_SECONDS = 300          # 背景輪詢間隔(研究顯示 180s 以上安全)
@@ -560,6 +562,14 @@ class Handler(BaseHTTPRequestHandler):
             self._send_static("index.html")
         elif path in ("/manifest.json", "/sw.js") or path.startswith("/icons/"):
             self._send_static(path.lstrip("/"))
+        elif path == "/ca.pem":
+            # 只公開 CA 憑證(公鑰),方便手機下載安裝;私鑰不經過任何路由
+            ca = os.path.join(CERT_DIR, "ca.pem")
+            if os.path.isfile(ca):
+                with open(ca, "rb") as f:
+                    self._send(200, f.read(), "application/x-x509-ca-cert")
+            else:
+                self._send(404, {"error": "尚未產生憑證,先執行 uv run gen_certs.py"})
         elif path == "/api/usage":
             if params.get("fresh") == "1":
                 self._send(200, monitor.maybe_fetch())
@@ -586,10 +596,25 @@ def lan_ip():
 
 def main():
     threading.Thread(target=monitor.poll_forever, daemon=True).start()
+    ip = lan_ip()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     print(f"Token Monitor 已啟動:")
     print(f"  本機   → http://localhost:{PORT}")
-    print(f"  手機   → http://{lan_ip()}:{PORT}  (需同一個 Wi-Fi)")
+    print(f"  手機   → http://{ip}:{PORT}  (需同一個 Wi-Fi)")
+
+    # certs/ 有憑證就加開 HTTPS(手機 PWA / service worker 需要 secure context)
+    cert, key = os.path.join(CERT_DIR, "server.pem"), os.path.join(CERT_DIR, "server.key")
+    if os.path.isfile(cert) and os.path.isfile(key):
+        import ssl
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(cert, key)
+        tls_server = ThreadingHTTPServer(("0.0.0.0", TLS_PORT), Handler)
+        tls_server.socket = ctx.wrap_socket(tls_server.socket, server_side=True)
+        threading.Thread(target=tls_server.serve_forever, daemon=True).start()
+        print(f"  HTTPS  → https://{ip}:{TLS_PORT}  (PWA 安裝用;CA 憑證: http://{ip}:{PORT}/ca.pem)")
+    else:
+        print(f"  (未偵測到 certs/,只跑 HTTP。要讓手機 PWA 完整運作請先執行 uv run gen_certs.py)")
+
     server.serve_forever()
 
 

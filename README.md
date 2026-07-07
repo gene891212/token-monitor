@@ -32,13 +32,35 @@ uv run server.py
 已內建 Web App Manifest、圖示與 service worker:
 
 - **iOS Safari:**分享 →「加入主畫面」,會有獨立圖示、全螢幕開啟(無網址列)。
-- **Android Chrome:**選單 →「加入主畫面」。
-- **離線行為:**斷線時仍可開啟頁面,顯示最後一次成功抓到的數字。
+- **Android Chrome:**選單 →「加入主畫面」。**需要 HTTPS**(見下節),
+  純 HTTP 只會建一般書籤,開起來仍是帶網址列的瀏覽器分頁。
+- **離線行為:**斷線時仍可開啟頁面,顯示最後一次成功抓到的數字(需 HTTPS)。
 
-注意:service worker 需要 secure context——`localhost` 可以,但手機透過
-`http://<區網 IP>` 開啟時瀏覽器會跳過 SW 註冊(加入主畫面與全螢幕不受影響,
-只是沒有離線快取)。要在手機上啟用完整離線功能,需要另外套 HTTPS(例如
-Tailscale Serve 或 mkcert + 反向代理)。
+## HTTPS(自簽 CA)
+
+Service worker 與 Android PWA 安裝都要求 secure context。內建自簽 CA 方案,
+不需要反向代理——`http.server` 直接由 Python `ssl` 模組包成 HTTPS:
+
+```sh
+uv run gen_certs.py   # 產生 certs/ca.pem(CA)與 certs/server.pem(伺服器憑證)
+uv run server.py      # 偵測到 certs/ 會自動加開 HTTPS(預設 8788 埠)
+```
+
+手機安裝 CA 憑證(一次性):
+
+1. 手機瀏覽器開 `http://<區網 IP>:8787/ca.pem` 下載
+2. **iOS:**設定 → 一般 → VPN 與裝置管理 → 安裝描述檔,再到
+   一般 → 關於本機 → 憑證信任設定 → 開啟完全信任
+3. **Android:**設定 → 安全性 → 加密與憑證 → 安裝憑證 → CA 憑證
+4. 之後手機一律開 `https://<區網 IP>:8788`,再「加入主畫面」
+
+備註:
+
+- 伺服器憑證 SAN 綁目前的區網 IP;**IP 變了重跑 `gen_certs.py` 再重啟即可**,
+  CA 不變、手機不用重裝。建議在路由器上幫 Mac 設固定 IP 免去這個麻煩。
+- `certs/` 含私鑰,已加入 `.gitignore`;`/ca.pem` 路由只公開 CA 公鑰。
+- 想不折騰憑證的話,替代方案是 Tailscale Serve(自動配正式憑證,
+  還能在外網看),見官方文件。
 
 ## 開機自動啟動
 
