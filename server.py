@@ -250,13 +250,14 @@ def claude_refresh(creds):
         status, payload = http_json("POST", url, headers={"User-Agent": CLAUDE_UA}, form=form)
         if status == 200 and "access_token" in payload:
             break
-        last = (url, status, payload.get("error"))
+        err = payload.get("error") if isinstance(payload, dict) else None
+        if err in ("invalid_grant", "invalid_request") or status in (400, 401):
+            raise RuntimeError("Claude 登入已失效,請重新開啟 Claude Code 登入一次")
+        last = (url, status, err)
     else:
         url, status, err = last
         if status == 0:
             raise RuntimeError("網路連不上,請確認電腦已連上網際網路")
-        if err in ("invalid_grant", "invalid_request") or status in (400, 401):
-            raise RuntimeError("Claude 登入已失效,請重新開啟 Claude Code 登入一次")
         raise RuntimeError(f"Claude token refresh 失敗:{url} → HTTP {status} {err}")
     oauth["accessToken"] = payload["access_token"]
     if payload.get("refresh_token"):
@@ -413,11 +414,21 @@ def codex_fetch():
 
     windows = []
     rl = payload.get("rate_limit") or {}
-    for key, wid, label in (("primary_window", "5h", "5 小時"),
-                            ("secondary_window", "weekly", "每週")):
+    for key, fallback_id, fallback_label in (
+        ("primary_window", "primary", "主要"),
+        ("secondary_window", "weekly", "每週"),
+    ):
         w = rl.get(key)
         if not w:
             continue
+        # 嘗試從 API 回應取得視窗時長,動態計算 id 和標籤
+        size = w.get("window_size_seconds") or w.get("window_seconds") or w.get("ttl")
+        if size:
+            wid = _duration_id(int(size))
+            label = _fmt_duration(int(size))
+        else:
+            wid = fallback_id
+            label = fallback_label
         windows.append({
             "id": wid,
             "label": label,
@@ -435,6 +446,32 @@ def iso_to_epoch(s):
         return int(datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp())
     except Exception:
         return None
+
+
+def _fmt_duration(seconds):
+    """秒數 → 人類可讀的中文時間標籤."""
+    if not seconds:
+        return None
+    hours = seconds / 3600
+    if hours < 1:
+        return f"{int(seconds / 60)} 分鐘"
+    if hours < 24:
+        return f"{int(hours)} 小時" if hours == int(hours) else f"{hours:.1f} 小時"
+    days = hours / 24
+    return f"{int(days)} 天" if days == int(days) else f"{days:.1f} 天"
+
+
+def _duration_id(seconds):
+    """秒數 → 短 window id,供 DB 與前端使用."""
+    if not seconds:
+        return None
+    hours = seconds / 3600
+    if hours < 24:
+        h = int(hours) if hours == int(hours) else round(hours, 1)
+        return f"{h}h"
+    days = hours / 24
+    d = int(days) if days == int(days) else round(days, 1)
+    return f"{d}d"
 
 
 class Store:

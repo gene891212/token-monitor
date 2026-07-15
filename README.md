@@ -16,7 +16,7 @@
 ## 啟動
 
 專案用 [uv](https://docs.astral.sh/uv/) 管理,不用手動建 virtualenv 或裝套件
-(本專案本來就只用 Python 標準庫,`uv` 主要負責鎖定 Python 版本、統一啟動方式)。
+(`uv` 主要負責鎖定 Python 版本、統一啟動方式)。
 
 ```sh
 uv run server.py
@@ -26,6 +26,31 @@ uv run server.py
 
 - 本機打開 <http://localhost:8787>
 - 手機(同一個 Wi-Fi)打開 `http://<這台電腦的區網 IP>:8787`,啟動時終端機會印出網址
+
+## macOS 狀態列
+
+macOS 可以直接跑狀態列版本:
+
+```sh
+uv run menu_bar.py
+```
+
+狀態列會顯示 Claude / Codex 的 5 小時視窗用量,例如 `C 42% X 18%`。
+點開選單可以查看 5 小時與每週視窗、手動刷新。狀態列版本會重用同一套本機憑證讀取與 token refresh 邏輯,
+不會把 token 顯示在選單或 HTTP 回應裡。
+
+登入時自動啟動狀態列版本:
+
+```sh
+cp com.gene.token-monitor-menubar.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.gene.token-monitor-menubar.plist
+```
+
+停用:
+
+```sh
+launchctl unload ~/Library/LaunchAgents/com.gene.token-monitor-menubar.plist
+```
 
 ## PWA(加入主畫面)
 

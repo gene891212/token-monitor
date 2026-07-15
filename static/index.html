@@ -168,7 +168,7 @@
   <div class="card chart-card">
     <div class="chart-head">
       <div class="chart-title">
-        <h2>用量趨勢（5 小時視窗）</h2>
+        <h2>用量趨勢</h2>
         <div class="range-btns">
           <button data-hours="24" class="active">24h</button>
           <button data-hours="168">7 天</button>
@@ -185,10 +185,7 @@
       </div>
     </div>
     <svg id="chart" preserveAspectRatio="none"></svg>
-    <div class="legend">
-      <span><i style="background: var(--claude)"></i>Claude 5h</span>
-      <span><i style="background: var(--codex)"></i>Codex 5h</span>
-    </div>
+    <div class="legend" id="legend"></div>
   </div>
 </div>
 
@@ -255,10 +252,15 @@ async function loadChart() {
   const W = svg.clientWidth || 500, H = svg.clientHeight || 160, PAD = 4;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const now = Math.floor(Date.now() / 1000), since = now - chartHours * 3600;
-  const series = [
-    ['claude:5h', getComputedStyle(document.documentElement).getPropertyValue('--claude')],
-    ['codex:5h', getComputedStyle(document.documentElement).getPropertyValue('--codex')],
-  ];
+  const providerColors = {
+    claude: getComputedStyle(document.documentElement).getPropertyValue('--claude').trim(),
+    codex: getComputedStyle(document.documentElement).getPropertyValue('--codex').trim(),
+  };
+  // 從歷史資料自動發現所有 series
+  const series = Object.keys(hist).sort().map(key => {
+    const provider = key.split(':')[0];
+    return [key, providerColors[provider] || '#888'];
+  });
   let out = '';
   for (const gy of [25, 50, 75]) {
     const y = H - PAD - (H - 2 * PAD) * gy / 100;
@@ -267,14 +269,25 @@ async function loadChart() {
   for (const [key, color] of series) {
     const pts = (hist[key] || []).filter(p => p[0] >= since);
     if (!pts.length) continue;
+    const isDashed = key.includes(':weekly');
     const path = pts.map((p, i) => {
       const x = PAD + (W - 2 * PAD) * (p[0] - since) / (chartHours * 3600);
       const y = H - PAD - (H - 2 * PAD) * Math.min(p[1], 100) / 100;
       return (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
     }).join(' ');
-    out += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+    const dash = isDashed ? ' stroke-dasharray="6 3"' : '';
+    out += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"${dash}/>`;
   }
   svg.innerHTML = out;
+  // 動態更新圖例
+  const legend = $('legend');
+  if (legend) {
+    legend.innerHTML = series.map(([key, color]) => {
+      const [provider, wid] = key.split(':');
+      const name = provider.charAt(0).toUpperCase() + provider.slice(1);
+      return `<span><i style="background:${color}"></i>${name} ${wid}</span>`;
+    }).join('');
+  }
 }
 
 document.querySelectorAll('.range-btns button').forEach(b => b.onclick = () => {
