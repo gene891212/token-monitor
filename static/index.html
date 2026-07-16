@@ -256,11 +256,26 @@ async function loadChart() {
     claude: getComputedStyle(document.documentElement).getPropertyValue('--claude').trim(),
     codex: getComputedStyle(document.documentElement).getPropertyValue('--codex').trim(),
   };
-  // 從歷史資料自動發現所有 series
-  const series = Object.keys(hist).sort().map(key => {
-    const provider = key.split(':')[0];
-    return [key, providerColors[provider] || '#888'];
-  });
+  // 將 window id 轉換為近似小時數,用於比較長短
+  function widToHours(wid) {
+    const h = wid.match(/^(\d+(?:\.\d+)?)h$/);
+    if (h) return parseFloat(h[1]);
+    const d = wid.match(/^(\d+(?:\.\d+)?)d$/);
+    if (d) return parseFloat(d[1]) * 24;
+    if (wid === 'weekly' || wid.startsWith('weekly')) return 168;
+    if (wid === 'primary') return 0;
+    return 999;
+  }
+  // 每個 provider 只保留最短視窗
+  const shortest = {};
+  for (const key of Object.keys(hist)) {
+    const [provider, wid] = key.split(':');
+    const hrs = widToHours(wid || '');
+    if (!shortest[provider] || hrs < shortest[provider].hrs) {
+      shortest[provider] = { key, hrs, color: providerColors[provider] || '#888' };
+    }
+  }
+  const series = Object.values(shortest).map(s => [s.key, s.color]);
   let out = '';
   for (const gy of [25, 50, 75]) {
     const y = H - PAD - (H - 2 * PAD) * gy / 100;
@@ -269,14 +284,12 @@ async function loadChart() {
   for (const [key, color] of series) {
     const pts = (hist[key] || []).filter(p => p[0] >= since);
     if (!pts.length) continue;
-    const isDashed = key.includes(':weekly');
     const path = pts.map((p, i) => {
       const x = PAD + (W - 2 * PAD) * (p[0] - since) / (chartHours * 3600);
       const y = H - PAD - (H - 2 * PAD) * Math.min(p[1], 100) / 100;
       return (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
     }).join(' ');
-    const dash = isDashed ? ' stroke-dasharray="6 3"' : '';
-    out += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"${dash}/>`;
+    out += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
   }
   svg.innerHTML = out;
   // 動態更新圖例
