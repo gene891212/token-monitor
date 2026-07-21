@@ -178,9 +178,6 @@
   .app-header { display:block; margin-bottom:42px; }
   .eyebrow, .header-copy, .provider::before { display:none; }
   h1 { font-size:clamp(30px, 5vw, 42px); line-height:1; letter-spacing:-.055em; font-weight:650; }
-  .refresh { min-height:42px; padding:0 15px; border:1px solid var(--ink); border-radius:6px; background:var(--ink); color:#fff; font-size:13px; font-weight:600; }
-  .refresh:hover { background:#3b403c; box-shadow:none; transform:none; }
-  .refresh:active { transform:scale(.98); }
   .provider-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-bottom:28px; }
   .provider { border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:none; }
   .provider-header { align-items:center; padding:13px 18px 12px; border-bottom:1px solid var(--line); }
@@ -206,9 +203,12 @@
   .range button:hover { color:var(--ink); background:rgba(255,255,255,.55); }
   .range button.active { background:var(--surface); color:var(--ink); font-weight:700; box-shadow:0 1px 2px rgba(32,35,33,.08); }
   .range button:active { background:var(--surface); transform:scale(.98); }
-  .refresh { height:var(--control-height); min-height:0; padding:0 14px; border:1px solid var(--line); border-radius:var(--control-radius); background:var(--surface); color:var(--muted); font-size:13px; font-weight:600; box-shadow:0 1px 2px rgba(32,35,33,.025); }
-  .refresh:hover { border-color:var(--faint); background:#e8ebe5; color:var(--ink); box-shadow:none; transform:none; }
-  .refresh:active { background:#e2e5de; transform:scale(.98); }
+  .refresh, .fullscreen-btn { display:inline-flex; align-items:center; justify-content:center; width:var(--control-height); height:var(--control-height); min-height:0; padding:0; border:1px solid var(--line); border-radius:var(--control-radius); background:var(--surface); color:var(--muted); cursor:pointer; box-shadow:0 1px 2px rgba(32,35,33,.025); transition:background .2s, border-color .2s, color .2s; }
+  .refresh:hover, .fullscreen-btn:hover { border-color:var(--faint); background:#e8ebe5; color:var(--ink); box-shadow:none; }
+  .refresh:active, .fullscreen-btn:active { background:#e2e5de; transform:scale(.95); }
+  .refresh svg, .fullscreen-btn svg { width:13px; height:13px; flex:none; }
+  .refresh.spinning svg { animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
   .series-picker { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
   .series-picker button { position:relative; gap:7px; border:1px solid var(--line); border-radius:6px; padding:7px 10px; background:var(--surface); font-size:12px; }
   .series-picker button:hover { border-color:var(--faint); color:var(--ink); transform:none; }
@@ -229,65 +229,58 @@
     .chart-shell { min-height:246px; }
     #chart { height:216px; }
   }
-  @media (orientation:landscape) and (max-height:500px) {
+  @media (orientation:landscape) and (max-height:600px) {
     html, body { height:100%; overflow:hidden; }
-    body { display:flex; flex-direction:column; max-width:none; height:100dvh; min-height:0; padding:max(9px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+    body { display:flex; flex-direction:column; max-width:none; height:100dvh; min-height:0; padding:max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
     .app-header { display:none; }
     .updated { font-size:10px; }
-    .history-controls { --control-height:32px; --control-radius:8px; }
-    .refresh { width:auto; height:var(--control-height); min-height:0; padding:0 9px; font-size:10px; }
-    main { display:grid; grid-template-columns:minmax(176px, .72fr) minmax(0, 2fr); gap:10px; flex:1; min-height:0; }
-    .provider-grid { display:grid; grid-template-columns:1fr !important; grid-template-rows:auto minmax(0, 1fr); gap:8px; height:100%; min-height:0; margin:0; overflow:hidden; }
+    .history-controls { --control-height:26px; --control-radius:6px; gap:6px; }
+    .refresh { width:auto; height:var(--control-height); min-height:0; padding:0 8px; font-size:10px; }
+    main { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; align-items:stretch; width:100%; }
+    .provider-grid { display:flex !important; flex-direction:row; flex:1; min-height:0; gap:12px; margin:0; align-items:stretch; }
+    .provider-grid .provider { flex:1; display:flex; flex-direction:column; }
     .provider { min-height:0; }
-    .provider-header { min-height:38px; padding:10px 12px; }
-    .provider-name { font-size:15px; }
-    .plan { max-width:58%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
-    .windows { padding:0 12px; }
-    .window { padding:10px 0; }
-    .window-top { gap:5px; }
-    .window-label { font-size:11px; }
-    .window-value { font-size:22px; }
-    .usage-rule { height:2px; margin-top:8px; }
-    .window-bottom { display:block; margin-top:7px; font-size:10px; }
+    .provider-header { min-height:36px; padding:8px 14px 6px; }
+    .provider-name { font-size:16px; }
+    .plan { max-width:58%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+    .windows { padding:0 14px; }
+    .window { padding:6px 0; }
+    .window-top { gap:6px; }
+    .window-label { font-size:12px; }
+    .window-value { font-size:21px; }
+    .usage-rule { height:6px; margin-top:9px; border-radius:99px; }
+    .window-bottom { display:block; margin-top:6px; font-size:12px; }
     .window-bottom span:first-child { display:none; }
-    .window-bottom span:last-child { display:block; text-align:left; }
-    .history { display:flex; min-width:0; min-height:0; height:100%; flex-direction:column; border-top:0; padding:0; }
-    .history-head { align-items:center; flex:none; flex-direction:row; margin-bottom:7px; }
-    .history-head h2 { font-size:14px; }
-    .history-controls { width:auto; gap:8px; flex-wrap:nowrap; padding:0; border:0; border-radius:0; background:transparent; }
+    .window-bottom span:last-child { display:block; text-align:left; font-weight:400; }
+    .history { display:grid; grid-template-columns:1fr auto; grid-template-rows:auto 1fr; grid-template-areas:"picker controls" "chart chart"; gap:4px 10px; flex:1; min-height:0; border-top:0; padding:0; }
+    .history-head { display:contents; }
+    .history-title { display:none; }
+    .history-controls { grid-area:controls; width:auto; gap:6px; flex-wrap:nowrap; padding:0; border:0; border-radius:0; background:transparent; align-items:center; }
     .history-note { display:none; }
     .range { height:var(--control-height); padding:2px; }
-    .range button { min-width:54px; border-radius:calc(var(--control-radius) - 2px); padding:0 8px; font-size:10px; }
+    .range button { min-width:48px; border-radius:calc(var(--control-radius) - 2px); padding:0 6px; font-size:10px; }
     .updated { display:block; color:var(--muted); font-size:10px; white-space:nowrap; }
-    .refresh { margin-left:0; }
-    .series-picker { display:flex; gap:5px; margin-bottom:7px; overflow:hidden; white-space:nowrap; }
-    .series-picker button { display:inline-flex; gap:4px; max-width:126px; padding:4px 6px; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .refresh, .fullscreen-btn { width:24px; height:24px; padding:0; border-radius:5px; }
+    .refresh svg, .fullscreen-btn svg { width:11px; height:11px; }
+    .series-picker { grid-area:picker; display:flex; flex-direction:row; align-items:center; gap:5px; margin-bottom:0; overflow:hidden; white-space:nowrap; flex:1; min-width:0; }
+    .series-picker:empty { display:none; }
+    .series-picker button { display:inline-flex; align-items:center; gap:4px; width:auto; max-width:135px; padding:3px 8px; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-radius:5px; }
     .series-mark { width:5px; height:5px; flex:none; }
-    .chart-shell { flex:1; min-height:0; height:0; padding:7px 7px 2px; }
-    #chart { height:100%; min-height:112px; }
+    .chart-shell { grid-area:chart; flex:1; min-height:0; height:100%; min-width:0; padding:5px 8px 3px; }
+    #chart { height:100%; width:100%; min-height:95px; }
     .chart-caption { display:none; }
     .chart-tooltip { min-width:124px; padding:6px 7px; font-size:10px; }
     .chart-tooltip strong { font-size:12px; }
   }
-  @media (orientation:landscape) and (max-height:380px) {
-    body { padding-top:max(4px, env(safe-area-inset-top)); padding-bottom:max(4px, env(safe-area-inset-bottom)); }
+  @media (orientation:landscape) and (max-height:460px) {
     main { gap:8px; }
     .updated { font-size:9px; }
     .provider-grid { gap:6px; }
-    .provider-header { min-height:29px; padding:6px 9px; }
-    .provider-name { font-size:13px; }
     .windows { padding:0 9px; }
     .window { padding:6px 0; }
-    .window-value { font-size:18px; }
     .usage-rule { margin-top:6px; }
-    .window-bottom { margin-top:4px; font-size:9px; }
-    .series-picker { margin-bottom:5px; }
-  }
-  @media (orientation:landscape) and (max-height:500px) and (max-width:650px) {
-    .history-title { display:none; }
-    .history-controls { width:100%; justify-content:flex-end; }
-  }
-</style>
+    .window-bottom, .window-bottom span { font-size:11.5px; font-weight:400; }
+  }</style>
 </head>
 <body>
   <header class="app-header">
@@ -318,7 +311,18 @@
             <button type="button" data-hours="168" class="active" aria-pressed="true">7 天</button>
           </div>
           <span class="updated" id="updated" aria-live="polite">正在取得最新用量</span>
-          <button class="refresh" id="refresh" type="button">更新</button>
+          <button class="refresh" id="refresh" type="button" aria-label="更新用量" title="更新用量">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 1-15.3 6.4"/>
+              <path d="M3 12a9 9 0 0 1 15.3-6.4"/>
+              <path d="M17.6 3.6v4.4H13.2M6.4 20.4V16H10.8"/>
+            </svg>
+          </button>
+          <button class="fullscreen-btn" id="fullscreen-btn" type="button" aria-label="切換全螢幕" title="切換全螢幕">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          </button>
         </div>
       </div>
       <div class="series-picker" id="series-picker" aria-label="圖表數列"></div>
@@ -412,10 +416,12 @@ function renderPicker() {
 function renderChart() {
   const svg = $('chart'), empty = $('chart-empty');
   const keys = orderedSeriesKeys().filter(key => activeSeries.has(key) && historyData[key]?.length);
-  const rect = svg.getBoundingClientRect(); const width = Math.max(280, Math.round(rect.width || 600)); const height = Math.max(190, Math.round(rect.height || 230));
-  const pad = { left: 28, right: 28, top: 10, bottom: 24 };
+  const rect = svg.getBoundingClientRect(); const width = Math.max(280, Math.round(rect.width || 600)); const height = Math.max(60, Math.round(rect.height || 180));
+  const pad = { left: 26, right: 26, top: 10, bottom: 20 };
   const now = Math.floor(Date.now() / 1000), since = now - chartHours * 3600;
-  svg.setAttribute('viewBox', `0 0 ${width} ${height}`); svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = '';
   empty.style.display = keys.length ? 'none' : 'grid';
   if (!keys.length) return;
   const x = timestamp => pad.left + (width - pad.left - pad.right) * ((timestamp - since) / (now - since));
@@ -424,11 +430,11 @@ function renderChart() {
   [0, 25, 50, 75, 100].forEach(percent => {
     const yy = y(percent); elements.push(`<line x1="${pad.left}" y1="${yy}" x2="${width-pad.right}" y2="${yy}" stroke="#e6e7e3" stroke-width="1"/>`);
     if (percent === 0 || percent === 50 || percent === 100) {
-      elements.push(`<text x="${pad.left - 9}" y="${yy + 4}" text-anchor="end" fill="#727772" font-size="10">${percent}</text>`);
-      elements.push(`<text x="${width - 2}" y="${yy + 4}" text-anchor="end" fill="#a6aaa5" font-size="10">${percent}</text>`);
+      elements.push(`<text x="${pad.left - 8}" y="${yy + 4}" text-anchor="end" fill="#727772" font-size="10">${percent}</text>`);
+      elements.push(`<text x="${width - pad.right + 20}" y="${yy + 4}" text-anchor="end" fill="#a6aaa5" font-size="10">${percent}</text>`);
     }
   });
-  const labels = chartHours === 24 ? [0, 6, 12, 18, 24] : [0, 2, 4, 6, 7];
+  const labels = chartHours === 24 ? [0, 4, 8, 12, 16, 20, 24] : [0, 1, 2, 3, 4, 5, 6, 7];
   labels.forEach(value => {
     const timestamp = chartHours === 24 ? since + value * 3600 : since + value * 86400;
     const label = chartHours === 24 ? `${String(value).padStart(2, '0')}:00` : new Date(timestamp * 1000).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
@@ -477,15 +483,28 @@ document.querySelectorAll('.range button').forEach(button => button.onclick = ()
   loadHistory();
 });
 $('refresh').onclick = async () => {
-  const button = $('refresh'); button.disabled = true; button.textContent = '更新中';
-  await loadUsage(true); await loadHistory(); button.disabled = false; button.textContent = '更新';
+  const button = $('refresh'); button.disabled = true; button.classList.add('spinning');
+  await loadUsage(true); await loadHistory(); button.disabled = false; button.classList.remove('spinning');
+};
+$('fullscreen-btn').onclick = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else if (document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
 };
 window.addEventListener('resize', renderChart);
 loadUsage(true).then(loadHistory);
 setInterval(() => loadUsage(false), 60000);
 setInterval(loadHistory, 300000);
+
+// 暫時關閉 Service Worker (測試環境下自動解註冊，避免快取幹擾)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (let registration of registrations) {
+      registration.unregister();
+    }
+  }).catch(() => {});
 }
 </script>
 </body>
