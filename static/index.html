@@ -507,12 +507,19 @@ loadUsage(true).then(loadHistory);
 setInterval(() => loadUsage(false), 60000);
 setInterval(loadHistory, 300000);
 
-// 暫時關閉 Service Worker (測試環境下自動解註冊，避免快取幹擾)
+// 正式啟用 Service Worker 並自動升級快取
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    for (let registration of registrations) {
-      registration.unregister();
-    }
+  navigator.serviceWorker.register('/sw.js').then(reg => {
+    reg.onupdatefound = () => {
+      const installing = reg.installing;
+      if (installing) {
+        installing.onstatechange = () => {
+          if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+            window.location.reload();
+          }
+        };
+      }
+    };
   }).catch(() => {});
 }
 </script>
