@@ -340,6 +340,7 @@ const $ = id => document.getElementById(id);
 let chartHours = 168;
 let historyData = {};
 let activeSeries = new Set();
+let currentWindowKeys = new Set();
 const seriesStyles = {
   'claude:5h': { color: '#b45132', dash: '' },
   'claude:weekly': { color: '#7a5b9a', dash: '8 5' },
@@ -361,7 +362,9 @@ function seriesRank(key) {
   return ranks[key] ?? (key.startsWith('claude:') ? 10 : 20);
 }
 function orderedSeriesKeys() {
-  return Object.keys(historyData).sort((a, b) => seriesRank(a) - seriesRank(b) || a.localeCompare(b));
+  return Object.keys(historyData)
+    .filter(key => !currentWindowKeys.size || currentWindowKeys.has(key))
+    .sort((a, b) => seriesRank(a) - seriesRank(b) || a.localeCompare(b));
 }
 
 function usageColor(percent) {
@@ -470,8 +473,12 @@ async function loadUsage(fresh) {
   try {
     const response = await fetch('/api/usage' + (fresh ? '?fresh=1' : ''));
     const data = await response.json();
+    currentWindowKeys.clear();
+    if (data.claude?.windows) data.claude.windows.forEach(w => currentWindowKeys.add(`claude:${w.id}`));
+    if (data.codex?.windows) data.codex.windows.forEach(w => currentWindowKeys.add(`codex:${w.id}`));
     renderProvider('claude', data.claude); renderProvider('codex', data.codex);
     $('updated').textContent = data.updated_at ? `最後更新 ${new Date(data.updated_at * 1000).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '尚未取得更新時間';
+    if (Object.keys(historyData).length) { renderPicker(); renderChart(); }
   } catch (_) { $('updated').textContent = '目前無法連線到監測服務'; }
 }
 async function loadHistory() {
