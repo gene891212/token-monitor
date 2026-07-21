@@ -280,7 +280,16 @@
     .window { padding:6px 0; }
     .usage-rule { margin-top:6px; }
     .window-bottom, .window-bottom span { font-size:10px; font-weight:400; }
-  }</style>
+  }
+  /* iOS iPhone 偽全螢幕切換支援 */
+  body.is-pseudo-fullscreen {
+    position: fixed !important; top: 0 !important; left: 0 !important;
+    width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+    z-index: 99999 !important; background: var(--canvas) !important;
+    margin: 0 !important;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
+  }
+</style>
 </head>
 <body>
   <header class="app-header">
@@ -493,11 +502,27 @@ $('refresh').onclick = async () => {
   const button = $('refresh'); button.disabled = true; button.classList.add('spinning');
   await loadUsage(true); await loadHistory(); button.disabled = false; button.classList.remove('spinning');
 };
+function togglePseudoFullscreen() {
+  document.body.classList.toggle('is-pseudo-fullscreen');
+  if (document.body.classList.contains('is-pseudo-fullscreen')) {
+    window.scrollTo(0, 0);
+  }
+  setTimeout(renderChart, 50);
+}
 $('fullscreen-btn').onclick = () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
-  } else if (document.exitFullscreen) {
-    document.exitFullscreen().catch(() => {});
+  const doc = document.documentElement;
+  if (!document.fullscreenElement && !document.body.classList.contains('is-pseudo-fullscreen')) {
+    if (doc.requestFullscreen) {
+      doc.requestFullscreen().catch(() => togglePseudoFullscreen());
+    } else {
+      togglePseudoFullscreen();
+    }
+  } else {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => togglePseudoFullscreen());
+    } else {
+      togglePseudoFullscreen();
+    }
   }
 };
 window.addEventListener('resize', renderChart);
