@@ -64,7 +64,7 @@
   .windows { padding: 0 22px; }
   .window { padding: 17px 0 16px; border-bottom: 1px solid var(--line); }
   .window:last-child { border-bottom: 0; }
-  .window-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+  .window-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .window-label { color: var(--muted); font-size: 13px; font-weight: 500; }
   .window-value { display: inline-flex; align-items: baseline; gap: .14em; color: var(--ink); font-size: clamp(28px, 3vw, 36px); line-height: .9; font-weight: 650; letter-spacing: 0; }
   .window-number { letter-spacing: -.045em; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
@@ -245,11 +245,11 @@
     .plan { max-width:58%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
     .windows { padding:0 14px; }
     .window { padding:6px 0; }
-    .window-top { gap:6px; }
+    .window-top { align-items:center; gap:6px; }
     .window-label { font-size:12px; }
     .window-value { font-size:21px; }
     .usage-rule { height:6px; margin-top:9px; border-radius:99px; }
-    .window-bottom { display:block; margin-top:6px; font-size:12px; }
+    .window-bottom { display:block; margin-top:5px; font-size:10px; }
     .window-bottom span:first-child { display:none; }
     .window-bottom span:last-child { display:block; text-align:left; font-weight:400; }
     .history { display:grid; grid-template-columns:1fr auto; grid-template-rows:auto 1fr; grid-template-areas:"picker controls" "chart chart"; gap:4px 10px; flex:1; min-height:0; border-top:0; padding:0; }
@@ -279,7 +279,7 @@
     .windows { padding:0 9px; }
     .window { padding:6px 0; }
     .usage-rule { margin-top:6px; }
-    .window-bottom, .window-bottom span { font-size:11.5px; font-weight:400; }
+    .window-bottom, .window-bottom span { font-size:10px; font-weight:400; }
   }</style>
 </head>
 <body>
