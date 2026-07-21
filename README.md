@@ -110,6 +110,15 @@ launchctl unload ~/Library/LaunchAgents/com.gene.token-monitor.plist
 schtasks /create /tn "TokenMonitor" /tr "C:\path\to\token-monitor\start-windows.bat" /sc onlogon /rl highest
 ```
 
+### Windows 系統匣
+
+```powershell
+uv run windows_tray.py
+```
+
+右下角會出現 Token Monitor 圖示。滑鼠移上去可查看 Claude / Codex 目前用量，
+右鍵可開啟儀表板、立即更新或結束程式。也可直接執行 `start-windows-tray.bat`。
+
 移除:
 
 ```powershell

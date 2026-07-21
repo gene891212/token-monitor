@@ -4,323 +4,486 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0e1015">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fbfbfa">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-<title>Token Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Token Monitor</title>
 <style>
   :root {
-    --bg: #0e1015;
-    --card: #171a21;
-    --card-border: #262b36;
-    --text: #eef0f4;
-    --muted: #9096a3;
-    --track: #262b36;
-    --ok: #4bcf8a;
-    --warn: #eeb340;
-    --danger: #ef6a5e;
-    --claude: #e08862;
-    --codex: #6fcab8;
+    --canvas: #f4f2ed;
+    --surface: #fcfbf8;
+    --surface-strong: #ffffff;
+    --ink: #1b2422;
+    --muted: #66716c;
+    --faint: #9ca49f;
+    --line: #dcded6;
+    --claude: #bd6345;
+    --codex: #237566;
+    --safe: #20745d;
+    --warning: #a66a08;
+    --danger: #b7463f;
+    --radius: 18px;
+    --shadow: 0 18px 45px rgba(42, 49, 43, .07), 0 2px 4px rgba(42, 49, 43, .04);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
+  * { box-sizing: border-box; }
+  html { background: var(--canvas); scroll-behavior: smooth; }
   body {
-    background: var(--bg); color: var(--text);
-    font-family: "Outfit", -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
-    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
-             calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-    max-width: 900px; margin: 0 auto;
+    max-width: 1240px; min-height: 100dvh; margin: 0 auto; padding: max(32px, env(safe-area-inset-top)) 28px calc(48px + env(safe-area-inset-bottom));
+    background: radial-gradient(circle at 92% 4%, rgba(35, 117, 102, .09), transparent 25rem), radial-gradient(circle at 4% 30%, rgba(189, 99, 69, .07), transparent 22rem), var(--canvas); color: var(--ink);
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei UI", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  .cards { display: flex; flex-direction: column; }
-  .layout { display: contents; }
-
-  header { margin-bottom: 18px; }
-  h1 { font-size: 21px; font-weight: 700; letter-spacing: -.3px; }
-  .chart-actions { display: flex; align-items: center; gap: 10px; flex: none; }
-  #updated { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  #refresh {
-    background: var(--card); color: var(--text); border: 1px solid var(--card-border);
-    width: 32px; height: 32px; border-radius: 50%; padding: 0; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; flex: none;
-    transition: transform .15s ease, background .2s ease, border-color .2s ease;
+  button { font: inherit; }
+  button:focus-visible { outline: 3px solid rgba(35, 117, 102, .35); outline-offset: 3px; }
+  h1, h2, p { margin: 0; }
+  .app-header { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin: 0 0 48px; }
+  .eyebrow { margin-bottom: 8px; color: var(--codex); font: 700 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; letter-spacing: .16em; text-transform: uppercase; }
+  h1 { font-size: clamp(38px, 6vw, 62px); line-height: .92; letter-spacing: -.07em; font-weight: 700; text-wrap: balance; }
+  .header-copy { max-width: 26rem; padding-bottom: 3px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  .updated { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .refresh {
+    min-height: 40px; padding: 0 16px; border: 1px solid var(--ink); border-radius: 9px;
+    background: var(--ink); color: #fff; cursor: pointer; font-size: 13px; font-weight: 600;
+    transition: transform .2s cubic-bezier(.16,1,.3,1), background .2s cubic-bezier(.16,1,.3,1), box-shadow .2s;
   }
-  #refresh:hover { background: #1d212a; border-color: #313747; }
-  #refresh:active { transform: scale(.9); }
-  #refresh svg { width: 15px; height: 15px; }
-  #refresh.spinning svg { animation: spin .7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .card {
-    background: var(--card);
-    border: 1px solid var(--card-border);
-    box-shadow: 0 10px 30px -14px rgba(0,0,0,.6);
-    border-radius: 18px; padding: 18px; margin-bottom: 14px;
+  .refresh:hover { background: #34413d; box-shadow: 0 5px 12px rgba(27, 36, 34, .16); transform: translateY(-1px); }
+  .refresh:active { transform: translateY(1px) scale(.98); }
+  .refresh[disabled] { cursor: wait; opacity: .7; }
+  .provider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 16px; margin-bottom: 42px; }
+  .provider { position: relative; border: 1px solid rgba(220, 222, 214, .9); border-radius: var(--radius); background: rgba(252, 251, 248, .86); box-shadow: var(--shadow); overflow: hidden; }
+  .provider::before { position: absolute; top: 0; left: 0; width: 100%; height: 4px; content: ""; background: var(--codex); }
+  #card-claude::before { background: var(--claude); }
+  .provider-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 21px 22px 16px; border-bottom: 1px solid var(--line); }
+  .provider-name { font-size: 20px; letter-spacing: -.04em; font-weight: 700; }
+  .plan { color: var(--muted); font: 600 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; text-transform: uppercase; letter-spacing: .08em; text-align: right; }
+  .windows { padding: 0 22px; }
+  .window { padding: 17px 0 16px; border-bottom: 1px solid var(--line); }
+  .window:last-child { border-bottom: 0; }
+  .window-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+  .window-label { color: var(--muted); font-size: 13px; font-weight: 500; }
+  .window-value { display: inline-flex; align-items: baseline; gap: .14em; color: var(--ink); font-size: clamp(28px, 3vw, 36px); line-height: .9; font-weight: 650; letter-spacing: 0; }
+  .window-number { letter-spacing: -.045em; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .window-unit { color: var(--muted); font-size: .48em; line-height: 1; font-weight: 600; letter-spacing: 0; }
+  .window-bottom { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .window-bottom span:last-child { overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+  .usage-rule { height: 5px; margin-top: 12px; background: #e8e9e3; border-radius: 99px; overflow: hidden; }
+  .usage-rule > span { display: block; height: 100%; border-radius: inherit; transition: width .6s cubic-bezier(.16,1,.3,1); }
+  .skeleton, .error { padding: 24px 22px; font-size: 14px; line-height: 1.6; }
+  .skeleton { color: var(--muted); }
+  .error { color: var(--danger); }
+  .history { padding: 28px; border: 1px solid rgba(220, 222, 214, .9); border-radius: calc(var(--radius) + 2px); background: rgba(252, 251, 248, .78); box-shadow: var(--shadow); }
+  .history-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 22px; }
+  .history-controls { --control-height: 40px; display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+  h2 { font-size: 22px; line-height: 1.15; letter-spacing: -.045em; font-weight: 700; }
+  .history-note { max-width: 40rem; margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+  .range { display: flex; height: var(--control-height); border: 1px solid var(--line); border-radius: 9px; padding: 3px; background: var(--surface-strong); }
+  .range button { height: 100%; border: 0; border-radius: 6px; padding: 0 11px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; transition: background .2s, color .2s; }
+  .range button:hover { color: var(--ink); background: #f2f2ed; }
+  .range button.active { background: var(--ink); color: #fff; }
+  .series-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .series-picker button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; color: var(--muted); background: var(--surface-strong); cursor: pointer; font-size: 12px; transition: transform .2s, border-color .2s, color .2s, background .2s; }
+  .series-picker button:hover { border-color: var(--faint); color: var(--ink); transform: translateY(-1px); }
+  .series-picker button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: #f2f4ef; }
+  .series-mark { width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255,255,255,.75); }
+  .chart-shell { position: relative; min-height: 302px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-strong); padding: 16px 14px 10px; overflow: hidden; }
+  #chart { width: 100%; height: 272px; display: block; overflow: visible; touch-action: pan-y; }
+  .chart-tooltip { position: absolute; z-index: 1; display: none; min-width: 142px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.97); color: var(--ink); box-shadow: 0 10px 22px rgba(32,35,33,.12); font-size: 12px; line-height: 1.55; pointer-events: none; }
+  .chart-tooltip strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .chart-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+  .chart-caption { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+  .chart-caption span:last-child { text-align: right; }
+  @media (max-width: 680px) {
+    body { padding: max(24px, env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); }
+    .app-header { align-items: flex-start; flex-direction: column; gap: 15px; margin-bottom: 32px; }
+    .header-copy { max-width: 32rem; }
+    .provider-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 28px; }
+    .provider-header, .windows { padding-left: 18px; padding-right: 18px; }
+    .history { padding: 20px 16px; }
+    .history-head { align-items: flex-start; flex-direction: column; }
+    .history-controls { width: 100%; justify-content: space-between; }
+    .chart-shell { min-height: 264px; padding: 12px 8px 7px; }
+    #chart { height: 240px; }
   }
-  .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; }
-  .card-head .name { font-size: 17px; font-weight: 600; letter-spacing: -.2px; flex: 1; }
-  .plan {
-    font-size: 10px; color: var(--muted); border: 1px solid var(--card-border);
-    padding: 3px 9px; border-radius: 999px;
-    text-transform: uppercase; letter-spacing: .6px;
-  }
-  .win { margin-bottom: 14px; }
-  .win:last-child { margin-bottom: 0; }
-  .win-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .win-label { font-size: 13px; color: var(--muted); }
-  .win-pct { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.3px; }
-  .bar { height: 9px; background: var(--track); border-radius: 999px; overflow: hidden; }
-  .bar > div { height: 100%; border-radius: 999px; transition: width .6s cubic-bezier(.3,0,.2,1); }
-  .win-reset { font-size: 12px; color: var(--muted); margin-top: 5px; font-variant-numeric: tabular-nums; }
-  .error { color: var(--danger); font-size: 14px; line-height: 1.6; }
-  .chart-card h2 { font-size: 14px; color: var(--muted); font-weight: 500; }
-  .chart-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-  .chart-title { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-  .range-btns { display: flex; gap: 6px; }
-  .range-btns button {
-    background: none; border: 1px solid var(--card-border); color: var(--muted);
-    border-radius: 999px; padding: 5px 12px; font-size: 12px; font-family: inherit; cursor: pointer;
-    transition: background .2s ease, color .2s ease, border-color .2s ease;
-  }
-  .range-btns button:hover { border-color: #313747; color: var(--text); }
-  .range-btns button.active { color: var(--text); background: #1d212a; border-color: #3a4152; }
-  #chart { width: 100%; height: 160px; display: block; }
-  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--muted); }
-  .legend span { display: inline-flex; align-items: center; gap: 5px; }
-  .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
-  .skeleton { color: var(--muted); font-size: 14px; }
-
-  /* 手機橫式:三張卡片(Claude / Codex / 趨勢圖)全部塞進一個畫面,不捲動 */
+  /* 橫屏採用左右工作區，保留捲動而非強制裁切內容。 */
   @media (orientation: landscape) and (max-height: 500px) {
-    body {
-      max-width: none; display: flex; flex-direction: column;
-      height: 100%; overflow: hidden;
-      padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
-               max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-    }
-    header { display: none; }
-    #updated { font-size: 10px; }
-    #refresh { width: 24px; height: 24px; }
-    #refresh svg { width: 11px; height: 11px; }
-    .layout {
-      display: flex; flex-direction: column; gap: 8px;
-      flex: 1; min-height: 0;
-    }
-    .cards { flex-direction: row; flex: none; gap: 10px; margin-bottom: 0; min-height: 0; align-items: stretch; }
-    .card { padding: 10px 16px; margin-bottom: 0; border-radius: 14px; min-height: 0; }
-    .cards .card { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
-    .card-head { margin-bottom: 7px; }
-    .card-head .name { font-size: 16px; }
-    .dot { width: 9px; height: 9px; }
-    .plan { font-size: 10px; padding: 2px 8px; }
-    .win { margin-bottom: 7px; }
-    .win:last-child { margin-bottom: 0; }
-    .win-row { margin-bottom: 4px; }
-    .win-label { font-size: 12px; }
-    .win-pct { font-size: 18px; }
-    .bar { height: 8px; }
-    .win-reset { font-size: 11px; margin-top: 3px; line-height: 1.2; }
-    .chart-card {
-      flex: 1; margin-bottom: 0;
-      display: flex; flex-direction: column; min-height: 0;
-    }
-    .chart-head { align-items: center; margin-bottom: 3px; flex: none; }
-    .chart-title { flex-direction: row; align-items: center; gap: 8px; }
-    .chart-card h2 { font-size: 11px; }
-    .chart-actions { gap: 6px; }
-    .range-btns button { padding: 2px 7px; font-size: 10px; }
-    #chart { flex: 1; min-height: 0; height: auto; }
-    .legend { flex: none; margin-top: 3px; font-size: 10px; gap: 8px; }
+    body { max-width: none; min-height: 100dvh; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+    .app-header { align-items: center; flex-direction: row; gap: 18px; margin-bottom: 16px; }
+    .eyebrow, .header-copy { display: none; }
+    h1 { font-size: clamp(25px, 4vw, 34px); }
+    main { display: grid; grid-template-columns: minmax(410px, 1.18fr) minmax(0, 1.35fr); align-items: start; gap: 14px; }
+    .provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px; margin: 0; }
+    .provider-header { padding: 13px 15px 11px; }
+    .provider-name { font-size: 16px; }
+    .plan { max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
+    .windows { padding: 0 15px; }
+    .window { padding: 10px 0; }
+    .window-label { font-size: 11px; }
+    .window-value { font-size: 25px; }
+    .usage-rule { height: 3px; margin-top: 8px; }
+    .window-bottom { display: block; margin-top: 6px; font-size: 10px; }
+    .window-bottom span:first-child { display: none; }
+    .window-bottom span:last-child { display: block; text-align: left; }
+    .history { min-width: 0; padding: 16px; }
+    .history-head { align-items: center; flex-direction: row; gap: 12px; margin-bottom: 10px; }
+    .history-head h2 { font-size: 16px; }
+    .history-controls { --control-height: 32px; gap: 6px; flex-wrap: nowrap; }
+    .history-note { display: none; }
+    .range { padding: 2px; }
+    .range button { padding: 0 7px; font-size: 10px; }
+    .refresh { min-height: var(--control-height); padding: 0 10px; font-size: 11px; }
+    .updated { display: none; }
+    .series-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-bottom: 8px; overflow: visible; white-space: normal; }
+    .series-picker button { gap: 4px; min-width: 0; max-width: none; padding: 4px 6px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .series-mark { width: 5px; height: 5px; flex: none; }
+    .chart-shell { min-height: 190px; padding: 8px 7px 2px; }
+    #chart { height: 180px; min-height: 0; }
+    .chart-caption { display: none; }
+    .chart-tooltip { min-width: 124px; padding: 6px 7px; font-size: 10px; }
+    .chart-tooltip strong { font-size: 12px; }
+  }
+  @media (orientation: landscape) and (max-height: 380px) {
+    body { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+    .app-header { margin-bottom: 10px; }
+    main { gap: 10px; }
+    .provider-grid { gap: 8px; }
+    .provider-header { padding: 9px 11px; }
+    .provider-name { font-size: 14px; }
+    .windows { padding: 0 11px; }
+    .window { padding: 7px 0; }
+    .window-value { font-size: 20px; }
+    .usage-rule { margin-top: 6px; }
+    .window-bottom { margin-top: 4px; font-size: 9px; }
+    .history { padding: 11px; }
+    .history-head { margin-bottom: 6px; }
+    .chart-shell { min-height: 150px; }
+    #chart { height: 142px; }
+  }
+  @media (orientation: landscape) and (max-height: 500px) and (max-width: 650px) {
+    main { grid-template-columns: 1fr; gap: 12px; }
+    .provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .history-title { display: none; }
+    .history-controls { width: 100%; justify-content: flex-end; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
+
+  /* Restored interface treatment. */
+  :root { --canvas:#f1f3f0; --surface:#fff; --ink:#202321; --muted:#68716b; --faint:#9fa7a1; --line:#dde1da; --claude:#c96c47; --codex:#207b6d; --safe:#12946b; --warning:#c76d03; --danger:#d2453c; --radius:12px; }
+  html { background:var(--canvas); }
+  body { max-width:1080px; min-height:0; margin:0 auto; padding:max(28px, env(safe-area-inset-top)) 24px calc(36px + env(safe-area-inset-bottom)); background:var(--canvas); color:var(--ink); }
+  .app-header { display:block; margin-bottom:42px; }
+  .eyebrow, .header-copy, .provider::before { display:none; }
+  h1 { font-size:clamp(30px, 5vw, 42px); line-height:1; letter-spacing:-.055em; font-weight:650; }
+  .refresh { min-height:42px; padding:0 15px; border:1px solid var(--ink); border-radius:6px; background:var(--ink); color:#fff; font-size:13px; font-weight:600; }
+  .refresh:hover { background:#3b403c; box-shadow:none; transform:none; }
+  .refresh:active { transform:scale(.98); }
+  .provider-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-bottom:28px; }
+  .provider { border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:none; }
+  .provider-header { align-items:center; padding:13px 18px 12px; border-bottom:1px solid var(--line); }
+  .provider-name { font-size:18px; letter-spacing:-.025em; font-weight:650; }
+  .plan { display:inline-flex; align-items:center; font:600 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; letter-spacing:.1em; }
+  .plan:empty { display:none; }
+  .windows { padding:0 18px; }
+  .window { padding:13px 0 12px; }
+  .window-label { font-size:13px; font-weight:400; }
+  .window-value { font-size:27px; line-height:1; font-weight:600; letter-spacing:0; }
+  .window-number { letter-spacing:-.035em; }
+  .window-bottom { margin-top:7px; font-size:12px; }
+  .usage-rule { height:4px; margin-top:9px; background:#edefe9; border-radius:99px; }
+  .usage-rule > span { border-radius:inherit; }
+  .skeleton, .error { padding:20px; font-size:14px; text-align:center; }
+  .history { padding:20px 0 0; border:0; border-top:1px solid var(--ink); border-radius:0; background:transparent; box-shadow:none; }
+  .history-head { gap:16px; margin-bottom:18px; }
+  .history-controls { --control-height:38px; --control-radius:9px; gap:14px; }
+  h2 { font-size:19px; line-height:1.15; letter-spacing:-.035em; font-weight:650; }
+  .history-note { margin-top:5px; font-size:13px; line-height:normal; }
+  .range { display:flex; align-items:stretch; height:var(--control-height); border:1px solid var(--line); border-radius:var(--control-radius); padding:3px; background:#e8ebe5; }
+  .range button { position:relative; min-width:72px; height:100%; border:0; border-radius:calc(var(--control-radius) - 3px); padding:0 10px; background:transparent; color:var(--muted); cursor:pointer; font-size:13px; transition:color .18s, background .18s, transform .18s; }
+  .range button:hover { color:var(--ink); background:rgba(255,255,255,.55); }
+  .range button.active { background:var(--surface); color:var(--ink); font-weight:700; box-shadow:0 1px 2px rgba(32,35,33,.08); }
+  .range button:active { background:var(--surface); transform:scale(.98); }
+  .refresh { height:var(--control-height); min-height:0; padding:0 14px; border:1px solid var(--line); border-radius:var(--control-radius); background:var(--surface); color:var(--muted); font-size:13px; font-weight:600; box-shadow:0 1px 2px rgba(32,35,33,.025); }
+  .refresh:hover { border-color:var(--faint); background:#e8ebe5; color:var(--ink); box-shadow:none; transform:none; }
+  .refresh:active { background:#e2e5de; transform:scale(.98); }
+  .series-picker { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .series-picker button { position:relative; gap:7px; border:1px solid var(--line); border-radius:6px; padding:7px 10px; background:var(--surface); font-size:12px; }
+  .series-picker button:hover { border-color:var(--faint); color:var(--ink); transform:none; }
+  .series-picker button[aria-pressed="true"] { border-color:color-mix(in srgb, var(--series-color) 42%, var(--line)); color:var(--ink); background:color-mix(in srgb, var(--series-color) 7%, var(--surface)); }
+  .series-mark { width:7px; height:7px; box-shadow:none; }
+  .chart-shell { min-height:258px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); padding:12px 10px 8px; overflow:visible; }
+  #chart { height:230px; }
+  .chart-tooltip { border-radius:7px; background:#fff; box-shadow:0 8px 18px rgba(32,35,33,.08); }
+  .chart-caption { margin-top:10px; font-size:12px; }
+  @media (max-width:680px) {
+    body { padding-left:16px; padding-right:16px; }
+    .app-header { margin-bottom:30px; }
+    .provider-grid { grid-template-columns:1fr; gap:12px; margin-bottom:28px; }
+    .provider-header, .windows { padding-left:16px; padding-right:16px; }
+    .history { padding:20px 0 0; }
+    .history-head { align-items:flex-start; flex-direction:column; }
+    .history-controls { width:100%; justify-content:space-between; }
+    .chart-shell { min-height:246px; }
+    #chart { height:216px; }
+  }
+  @media (orientation:landscape) and (max-height:500px) {
+    html, body { height:100%; overflow:hidden; }
+    body { display:flex; flex-direction:column; max-width:none; height:100dvh; min-height:0; padding:max(9px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+    .app-header { display:none; }
+    .updated { font-size:10px; }
+    .history-controls { --control-height:32px; --control-radius:8px; }
+    .refresh { width:auto; height:var(--control-height); min-height:0; padding:0 9px; font-size:10px; }
+    main { display:grid; grid-template-columns:minmax(176px, .72fr) minmax(0, 2fr); gap:10px; flex:1; min-height:0; }
+    .provider-grid { display:grid; grid-template-columns:1fr !important; grid-template-rows:auto minmax(0, 1fr); gap:8px; height:100%; min-height:0; margin:0; overflow:hidden; }
+    .provider { min-height:0; }
+    .provider-header { min-height:38px; padding:10px 12px; }
+    .provider-name { font-size:15px; }
+    .plan { max-width:58%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
+    .windows { padding:0 12px; }
+    .window { padding:10px 0; }
+    .window-top { gap:5px; }
+    .window-label { font-size:11px; }
+    .window-value { font-size:22px; }
+    .usage-rule { height:2px; margin-top:8px; }
+    .window-bottom { display:block; margin-top:7px; font-size:10px; }
+    .window-bottom span:first-child { display:none; }
+    .window-bottom span:last-child { display:block; text-align:left; }
+    .history { display:flex; min-width:0; min-height:0; height:100%; flex-direction:column; border-top:0; padding:0; }
+    .history-head { align-items:center; flex:none; flex-direction:row; margin-bottom:7px; }
+    .history-head h2 { font-size:14px; }
+    .history-controls { width:auto; gap:8px; flex-wrap:nowrap; padding:0; border:0; border-radius:0; background:transparent; }
+    .history-note { display:none; }
+    .range { height:var(--control-height); padding:2px; }
+    .range button { min-width:54px; border-radius:calc(var(--control-radius) - 2px); padding:0 8px; font-size:10px; }
+    .updated { display:block; color:var(--muted); font-size:10px; white-space:nowrap; }
+    .refresh { margin-left:0; }
+    .series-picker { display:flex; gap:5px; margin-bottom:7px; overflow:hidden; white-space:nowrap; }
+    .series-picker button { display:inline-flex; gap:4px; max-width:126px; padding:4px 6px; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .series-mark { width:5px; height:5px; flex:none; }
+    .chart-shell { flex:1; min-height:0; height:0; padding:7px 7px 2px; }
+    #chart { height:100%; min-height:112px; }
+    .chart-caption { display:none; }
+    .chart-tooltip { min-width:124px; padding:6px 7px; font-size:10px; }
+    .chart-tooltip strong { font-size:12px; }
+  }
+  @media (orientation:landscape) and (max-height:380px) {
+    body { padding-top:max(4px, env(safe-area-inset-top)); padding-bottom:max(4px, env(safe-area-inset-bottom)); }
+    main { gap:8px; }
+    .updated { font-size:9px; }
+    .provider-grid { gap:6px; }
+    .provider-header { min-height:29px; padding:6px 9px; }
+    .provider-name { font-size:13px; }
+    .windows { padding:0 9px; }
+    .window { padding:6px 0; }
+    .window-value { font-size:18px; }
+    .usage-rule { margin-top:6px; }
+    .window-bottom { margin-top:4px; font-size:9px; }
+    .series-picker { margin-bottom:5px; }
+  }
+  @media (orientation:landscape) and (max-height:500px) and (max-width:650px) {
+    .history-title { display:none; }
+    .history-controls { width:100%; justify-content:flex-end; }
   }
 </style>
 </head>
 <body>
-<header>
-  <h1>Token Monitor</h1>
-</header>
+  <header class="app-header">
+    <h1>Token Monitor</h1>
+  </header>
 
-<div class="layout">
-  <div class="cards">
-    <div class="card" id="card-claude">
-      <div class="card-head">
-        <span class="dot" style="background: var(--claude); color: var(--claude)"></span>
-        <span class="name">Claude</span>
-        <span class="plan" id="plan-claude"></span>
-      </div>
-      <div id="body-claude" class="skeleton">讀取中…</div>
-    </div>
+  <main>
+    <section class="provider-grid" aria-label="目前用量">
+      <article class="provider" id="card-claude">
+        <div class="provider-header"><h2 class="provider-name">Claude</h2><span class="plan" id="plan-claude"></span></div>
+        <div class="windows" id="body-claude"><p class="skeleton">正在讀取 Claude 用量</p></div>
+      </article>
+      <article class="provider" id="card-codex">
+        <div class="provider-header"><h2 class="provider-name">Codex</h2><span class="plan" id="plan-codex"></span></div>
+        <div class="windows" id="body-codex"><p class="skeleton">正在讀取 Codex 用量</p></div>
+      </article>
+    </section>
 
-    <div class="card" id="card-codex">
-      <div class="card-head">
-        <span class="dot" style="background: var(--codex); color: var(--codex)"></span>
-        <span class="name">Codex</span>
-        <span class="plan" id="plan-codex"></span>
-      </div>
-      <div id="body-codex" class="skeleton">讀取中…</div>
-    </div>
-  </div>
-
-  <div class="card chart-card">
-    <div class="chart-head">
-      <div class="chart-title">
-        <h2>用量趨勢</h2>
-        <div class="range-btns">
-          <button data-hours="24" class="active">24h</button>
-          <button data-hours="168">7 天</button>
+    <section class="history" aria-labelledby="history-title">
+      <div class="history-head">
+        <div class="history-title">
+          <h2 id="history-title">用量變化</h2>
+          <p class="history-note">選擇要比較的額度視窗，查看累積用量。</p>
+        </div>
+        <div class="history-controls">
+          <div class="range" aria-label="歷史時間範圍">
+            <button type="button" data-hours="24" aria-pressed="false">24 小時</button>
+            <button type="button" data-hours="168" class="active" aria-pressed="true">7 天</button>
+          </div>
+          <span class="updated" id="updated" aria-live="polite">正在取得最新用量</span>
+          <button class="refresh" id="refresh" type="button">更新</button>
         </div>
       </div>
-      <div class="chart-actions">
-        <span id="updated">載入中…</span>
-        <button id="refresh" aria-label="刷新" title="刷新">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 12a9 9 0 0 1 15.3-6.4M21 12a9 9 0 0 1-15.3 6.4"/>
-            <path d="M17.6 3.6v4.4H13.2M6.4 20.4V16H10.8"/>
-          </svg>
-        </button>
+      <div class="series-picker" id="series-picker" aria-label="圖表數列"></div>
+      <div class="chart-shell" id="chart-shell">
+        <svg id="chart" role="img" aria-label="用量歷史折線圖"></svg>
+        <div class="chart-tooltip" id="chart-tooltip" role="status"></div>
+        <div class="chart-empty" id="chart-empty">尚無足夠的歷史資料</div>
       </div>
-    </div>
-    <svg id="chart" preserveAspectRatio="none"></svg>
-    <div class="legend" id="legend"></div>
-  </div>
-</div>
+      <div class="chart-caption"><span>0% 已用</span><span>100% 已用</span></div>
+    </section>
+  </main>
 
 <script>
 const $ = id => document.getElementById(id);
-let chartHours = 24;
-
-function barColor(p) {
-  return p >= 85 ? 'var(--danger)' : p >= 60 ? 'var(--warn)' : 'var(--ok)';
+let chartHours = 168;
+let historyData = {};
+let activeSeries = new Set();
+const seriesStyles = {
+  'claude:5h': { color: '#b45132', dash: '' },
+  'claude:weekly': { color: '#7a5b9a', dash: '8 5' },
+  'claude:weekly_scoped': { color: '#8a7000', dash: '2 4' },
+  'codex:primary': { color: '#207b6d', dash: '' },
+  'codex:weekly': { color: '#207b6d', dash: '' },
+};
+function styleForSeries(key) {
+  return seriesStyles[key] || { color: key.startsWith('claude:') ? '#c96c47' : '#207b6d', dash: '' };
+}
+function seriesRank(key) {
+  const ranks = {
+    'claude:5h': 0,
+    'claude:weekly': 1,
+    'claude:weekly_scoped': 2,
+    'codex:primary': 3,
+    'codex:weekly': 3,
+  };
+  return ranks[key] ?? (key.startsWith('claude:') ? 10 : 20);
+}
+function orderedSeriesKeys() {
+  return Object.keys(historyData).sort((a, b) => seriesRank(a) - seriesRank(b) || a.localeCompare(b));
 }
 
-function fmtCountdown(resetsAt) {
-  if (!resetsAt) return '';
-  const s = resetsAt - Math.floor(Date.now() / 1000);
-  if (s <= 0) return '即將重置';
-  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
-  const t = new Date(resetsAt * 1000);
-  const clock = t.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
-  let left = d > 0 ? `${d} 天 ${h} 小時` : h > 0 ? `${h} 小時 ${m} 分` : `${m} 分`;
-  return `重置:${clock}（剩 ${left}）`;
+function usageColor(percent) {
+  return percent >= 85 ? 'var(--danger)' : percent >= 60 ? 'var(--warning)' : 'var(--safe)';
 }
-
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
+}
+function resetText(resetsAt) {
+  if (!resetsAt) return '重置時間未知';
+  const left = resetsAt - Math.floor(Date.now() / 1000);
+  if (left <= 0) return '等待重置資料更新';
+  const days = Math.floor(left / 86400), hours = Math.floor(left % 86400 / 3600), minutes = Math.floor(left % 3600 / 60);
+  const remaining = days ? `${days} 天 ${hours} 小時後` : hours ? `${hours} 小時 ${minutes} 分後` : `${minutes} 分後`;
+  const date = new Date(resetsAt * 1000).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${remaining}重置 (${date})`;
+}
 function renderProvider(name, data) {
   const body = $('body-' + name), plan = $('plan-' + name);
-  if (!data) { body.className = 'skeleton'; body.textContent = '尚無資料'; return; }
-  if (!data.ok) {
-    body.className = 'error';
-    body.textContent = '⚠ ' + (data.error || '讀取失敗');
-    plan.textContent = '';
-    return;
-  }
+  if (!data) { body.innerHTML = '<p class="skeleton">等待服務回應</p>'; return; }
+  if (!data.ok) { plan.textContent = ''; body.innerHTML = `<p class="error">${escapeHtml(data.error || '無法讀取用量')}</p>`; return; }
   plan.textContent = data.plan || '';
-  body.className = '';
-  body.innerHTML = data.windows.map(w => `
-    <div class="win">
-      <div class="win-row">
-        <span class="win-label">${w.label}</span>
-        <span class="win-pct" style="color:${barColor(w.used_percent)}">${w.used_percent}%</span>
-      </div>
-      <div class="bar"><div style="width:${Math.min(w.used_percent, 100)}%;background:${barColor(w.used_percent)}"></div></div>
-      <div class="win-reset">${fmtCountdown(w.resets_at)}</div>
-    </div>`).join('');
+  body.innerHTML = (data.windows || []).map(window => {
+    const value = Math.max(0, Math.min(Number(window.used_percent) || 0, 100));
+    return `<div class="window">
+      <div class="window-top"><span class="window-label">${escapeHtml(window.label)}</span><strong class="window-value" aria-label="${value}%" style="color:${usageColor(value)}"><span class="window-number">${value}</span><span class="window-unit" aria-hidden="true">%</span></strong></div>
+      <div class="usage-rule" aria-label="${escapeHtml(window.label)} 已用 ${value}%"><span style="width:${value}%;background:${usageColor(value)}"></span></div>
+      <div class="window-bottom"><span>已用額度</span><span>${escapeHtml(resetText(window.resets_at))}</span></div>
+    </div>`;
+  }).join('') || '<p class="skeleton">沒有可顯示的額度視窗</p>';
 }
-
-async function load(fresh) {
-  try {
-    const r = await fetch('/api/usage' + (fresh ? '?fresh=1' : ''));
-    const d = await r.json();
-    renderProvider('claude', d.claude);
-    renderProvider('codex', d.codex);
-    if (d.updated_at) {
-      $('updated').textContent = '更新於 ' + new Date(d.updated_at * 1000)
-        .toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-    }
-  } catch (e) {
-    $('updated').textContent = '⚠ 連不上伺服器';
-  }
+function displayName(key) {
+  const [provider, id] = key.split(':');
+  const names = { primary: '每週額度', weekly: '每週額度', weekly_scoped: '每週模型額度', '5h': '5 小時額度' };
+  return `${provider === 'claude' ? 'Claude' : 'Codex'} ${names[id] || id}`;
 }
-
-async function loadChart() {
-  const r = await fetch('/api/history?hours=' + chartHours);
-  const hist = await r.json();
-  const svg = $('chart');
-  const W = svg.clientWidth || 500, H = svg.clientHeight || 160, PAD = 4;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+function renderPicker() {
+  const picker = $('series-picker');
+  const keys = orderedSeriesKeys().filter(key => historyData[key]?.length);
+  if (!keys.length) { picker.innerHTML = ''; return; }
+  if (!activeSeries.size) keys.forEach(key => activeSeries.add(key));
+  picker.innerHTML = keys.map(key => {
+    const style = styleForSeries(key); const selected = activeSeries.has(key);
+    return `<button type="button" data-series="${escapeHtml(key)}" style="--series-color:${style.color}" aria-pressed="${selected}"><i class="series-mark" style="background:${style.color}"></i>${escapeHtml(displayName(key))}</button>`;
+  }).join('');
+  picker.querySelectorAll('button').forEach(button => button.onclick = () => {
+    const key = button.dataset.series;
+    activeSeries.has(key) ? activeSeries.delete(key) : activeSeries.add(key);
+    renderPicker(); renderChart();
+  });
+}
+function renderChart() {
+  const svg = $('chart'), empty = $('chart-empty');
+  const keys = orderedSeriesKeys().filter(key => activeSeries.has(key) && historyData[key]?.length);
+  const rect = svg.getBoundingClientRect(); const width = Math.max(280, Math.round(rect.width || 600)); const height = Math.max(190, Math.round(rect.height || 230));
+  const pad = { left: 28, right: 28, top: 10, bottom: 24 };
   const now = Math.floor(Date.now() / 1000), since = now - chartHours * 3600;
-  const providerColors = {
-    claude: getComputedStyle(document.documentElement).getPropertyValue('--claude').trim(),
-    codex: getComputedStyle(document.documentElement).getPropertyValue('--codex').trim(),
-  };
-  // 將 window id 轉換為近似小時數,用於比較長短
-  function widToHours(wid) {
-    const h = wid.match(/^(\d+(?:\.\d+)?)h$/);
-    if (h) return parseFloat(h[1]);
-    const d = wid.match(/^(\d+(?:\.\d+)?)d$/);
-    if (d) return parseFloat(d[1]) * 24;
-    if (wid === 'weekly' || wid.startsWith('weekly')) return 168;
-    if (wid === 'primary') return 0;
-    return 999;
-  }
-  // 每個 provider 只保留最短視窗
-  const shortest = {};
-  for (const key of Object.keys(hist)) {
-    const [provider, wid] = key.split(':');
-    const hrs = widToHours(wid || '');
-    if (!shortest[provider] || hrs < shortest[provider].hrs) {
-      shortest[provider] = { key, hrs, color: providerColors[provider] || '#888' };
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`); svg.innerHTML = '';
+  empty.style.display = keys.length ? 'none' : 'grid';
+  if (!keys.length) return;
+  const x = timestamp => pad.left + (width - pad.left - pad.right) * ((timestamp - since) / (now - since));
+  const y = percent => pad.top + (height - pad.top - pad.bottom) * (1 - Math.max(0, Math.min(percent, 100)) / 100);
+  const elements = [];
+  [0, 25, 50, 75, 100].forEach(percent => {
+    const yy = y(percent); elements.push(`<line x1="${pad.left}" y1="${yy}" x2="${width-pad.right}" y2="${yy}" stroke="#e6e7e3" stroke-width="1"/>`);
+    if (percent === 0 || percent === 50 || percent === 100) {
+      elements.push(`<text x="${pad.left - 9}" y="${yy + 4}" text-anchor="end" fill="#727772" font-size="10">${percent}</text>`);
+      elements.push(`<text x="${width - 2}" y="${yy + 4}" text-anchor="end" fill="#a6aaa5" font-size="10">${percent}</text>`);
     }
-  }
-  const series = Object.values(shortest).map(s => [s.key, s.color]);
-  let out = '';
-  for (const gy of [25, 50, 75]) {
-    const y = H - PAD - (H - 2 * PAD) * gy / 100;
-    out += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="rgba(255,255,255,.12)" stroke-width="1" stroke-dasharray="4 4"/>`;
-  }
-  for (const [key, color] of series) {
-    const pts = (hist[key] || []).filter(p => p[0] >= since);
-    if (!pts.length) continue;
-    const path = pts.map((p, i) => {
-      const x = PAD + (W - 2 * PAD) * (p[0] - since) / (chartHours * 3600);
-      const y = H - PAD - (H - 2 * PAD) * Math.min(p[1], 100) / 100;
-      return (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
-    }).join(' ');
-    out += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
-  }
-  svg.innerHTML = out;
-  // 動態更新圖例
-  const legend = $('legend');
-  if (legend) {
-    legend.innerHTML = series.map(([key, color]) => {
-      const [provider, wid] = key.split(':');
-      const name = provider.charAt(0).toUpperCase() + provider.slice(1);
-      return `<span><i style="background:${color}"></i>${name} ${wid}</span>`;
-    }).join('');
-  }
+  });
+  const labels = chartHours === 24 ? [0, 6, 12, 18, 24] : [0, 2, 4, 6, 7];
+  labels.forEach(value => {
+    const timestamp = chartHours === 24 ? since + value * 3600 : since + value * 86400;
+    const label = chartHours === 24 ? `${String(value).padStart(2, '0')}:00` : new Date(timestamp * 1000).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+    elements.push(`<text x="${x(timestamp)}" y="${height - 5}" text-anchor="middle" fill="#727772" font-size="10">${label}</text>`);
+  });
+  keys.forEach(key => {
+    const points = historyData[key].filter(point => point[0] >= since && point[0] <= now);
+    if (!points.length) return;
+    const style = styleForSeries(key);
+    const path = points.map((point, index) => `${index ? 'L' : 'M'}${x(point[0]).toFixed(1)},${y(point[1]).toFixed(1)}`).join(' ');
+    elements.push(`<path d="${path}" fill="none" stroke="${style.color}" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"${style.dash ? ` stroke-dasharray="${style.dash}"` : ''}/> `);
+  });
+  svg.innerHTML = elements.join('');
+  svg.onpointermove = event => showTooltip(event, keys, { x, y, since, now, width, pad });
+  svg.onpointerleave = () => $('chart-tooltip').style.display = 'none';
 }
-
-document.querySelectorAll('.range-btns button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.range-btns button').forEach(x => x.classList.remove('active'));
-  b.classList.add('active');
-  chartHours = +b.dataset.hours;
-  loadChart();
+function showTooltip(event, keys, map) {
+  const svg = $('chart'), shell = $('chart-shell'), tooltip = $('chart-tooltip');
+  const rect = svg.getBoundingClientRect(); const position = Math.max(0, Math.min(1, (event.clientX - rect.left - map.pad.left) / (rect.width - map.pad.left - map.pad.right)));
+  const timestamp = map.since + position * (map.now - map.since);
+  const values = keys.map(key => {
+    const points = historyData[key].filter(point => point[0] >= map.since && point[0] <= map.now);
+    return { key, point: points.reduce((closest, point) => !closest || Math.abs(point[0] - timestamp) < Math.abs(closest[0] - timestamp) ? point : closest, null) };
+  }).filter(item => item.point);
+  if (!values.length) return;
+  const date = new Date(timestamp * 1000).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+  tooltip.innerHTML = `<span>${date}</span>${values.map(item => `<br><strong style="color:${styleForSeries(item.key).color}">${item.point[1]}%</strong> ${escapeHtml(displayName(item.key))}`).join('')}`;
+  tooltip.style.display = 'block';
+  const shellRect = shell.getBoundingClientRect(); const left = Math.min(shellRect.width - 150, Math.max(8, event.clientX - shellRect.left + 12));
+  tooltip.style.left = `${left}px`; tooltip.style.top = '18px';
+}
+async function loadUsage(fresh) {
+  try {
+    const response = await fetch('/api/usage' + (fresh ? '?fresh=1' : ''));
+    const data = await response.json();
+    renderProvider('claude', data.claude); renderProvider('codex', data.codex);
+    $('updated').textContent = data.updated_at ? `最後更新 ${new Date(data.updated_at * 1000).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '尚未取得更新時間';
+  } catch (_) { $('updated').textContent = '目前無法連線到監測服務'; }
+}
+async function loadHistory() {
+  try { const response = await fetch('/api/history?hours=' + chartHours); historyData = await response.json(); renderPicker(); renderChart(); } catch (_) { historyData = {}; renderPicker(); renderChart(); }
+}
+document.querySelectorAll('.range button').forEach(button => button.onclick = () => {
+  chartHours = Number(button.dataset.hours);
+  document.querySelectorAll('.range button').forEach(item => { const current = item === button; item.classList.toggle('active', current); item.setAttribute('aria-pressed', String(current)); });
+  loadHistory();
 });
-$('refresh').onclick = () => {
-  const btn = $('refresh');
-  btn.classList.add('spinning');
-  $('updated').textContent = '刷新中…';
-  load(true).then(loadChart).finally(() => btn.classList.remove('spinning'));
+$('refresh').onclick = async () => {
+  const button = $('refresh'); button.disabled = true; button.textContent = '更新中';
+  await loadUsage(true); await loadHistory(); button.disabled = false; button.textContent = '更新';
 };
-
-load(true).then(loadChart);
-setInterval(() => load(false), 60000);
-setInterval(loadChart, 300000);
-
-// PWA:需要 secure context(localhost 或 HTTPS);LAN IP 上會自動略過
+window.addEventListener('resize', renderChart);
+loadUsage(true).then(loadHistory);
+setInterval(() => loadUsage(false), 60000);
+setInterval(loadHistory, 300000);
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }

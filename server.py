@@ -415,8 +415,10 @@ def codex_fetch():
     windows = []
     rl = payload.get("rate_limit") or {}
     for key, fallback_id, fallback_label in (
-        ("primary_window", "primary", "主要"),
-        ("secondary_window", "weekly", "每週"),
+        # Codex 目前的 primary 視窗即為每週額度。保留 primary 作為內部
+        # ID，讓既有 SQLite 歷史資料仍接在同一條曲線上。
+        ("primary_window", "primary", "每週"),
+        ("secondary_window", "secondary", "次要額度"),
     ):
         w = rl.get(key)
         if not w:
