@@ -237,7 +237,7 @@
     .history-controls { --control-height:26px; --control-radius:6px; gap:6px; }
     .refresh { width:auto; height:var(--control-height); min-height:0; padding:0 8px; font-size:10px; }
     main { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; align-items:stretch; width:100%; }
-    .provider-grid { display:flex !important; flex-direction:row; flex:1; min-height:0; gap:12px; margin:0; align-items:stretch; }
+    .provider-grid { display:flex !important; flex-direction:row; flex:none; min-height:0; gap:12px; margin:0; align-items:stretch; }
     .provider-grid .provider { flex:1; display:flex; flex-direction:column; }
     .provider { min-height:0; }
     .provider-header { min-height:36px; padding:8px 14px 6px; }
@@ -267,7 +267,7 @@
     .series-picker button { display:inline-flex; align-items:center; gap:4px; width:auto; max-width:135px; padding:3px 8px; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-radius:5px; }
     .series-mark { width:5px; height:5px; flex:none; }
     .chart-shell { grid-area:chart; flex:1; min-height:0; height:100%; min-width:0; padding:5px 8px 3px; }
-    #chart { height:100%; width:100%; min-height:95px; }
+    #chart { height:100%; width:100%; min-height:60px; }
     .chart-caption { display:none; }
     .chart-tooltip { min-width:124px; padding:6px 7px; font-size:10px; }
     .chart-tooltip strong { font-size:12px; }
@@ -505,8 +505,13 @@ loadUsage(true).then(loadHistory);
 setInterval(() => loadUsage(false), 60000);
 setInterval(loadHistory, 300000);
 
+// 暫時關閉 Service Worker (測試環境下自動解註冊，避免快取幹擾)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (let registration of registrations) {
+      registration.unregister();
+    }
+  }).catch(() => {});
 }
 </script>
 </body>
