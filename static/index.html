@@ -60,12 +60,12 @@
   #card-claude::before { background: var(--claude); }
   .provider-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 21px 22px 16px; border-bottom: 1px solid var(--line); }
   .provider-name { font-size: 20px; letter-spacing: -.04em; font-weight: 700; }
-  .plan { color: var(--muted); font: 600 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; text-transform: uppercase; letter-spacing: .08em; text-align: right; }
+  .plan { color: var(--muted); font: 600 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; text-transform: uppercase; letter-spacing: .02em; text-align: right; }
   .windows { padding: 0 22px; }
   .window { padding: 17px 0 16px; border-bottom: 1px solid var(--line); }
   .window:last-child { border-bottom: 0; }
   .window-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .window-label { color: var(--muted); font-size: 13px; font-weight: 500; }
+  .window-label { color: var(--muted); font-size: 13px; font-weight: 400; }
   .window-value { display: inline-flex; align-items: baseline; gap: .14em; color: var(--ink); font-size: clamp(28px, 3vw, 36px); line-height: .9; font-weight: 650; letter-spacing: 0; }
   .window-number { letter-spacing: -.045em; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
   .window-unit { color: var(--muted); font-size: .48em; line-height: 1; font-weight: 600; letter-spacing: 0; }
@@ -119,13 +119,13 @@
     .provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px; margin: 0; }
     .provider-header { padding: 13px 15px 11px; }
     .provider-name { font-size: 16px; }
-    .plan { max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
+    .plan { max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; letter-spacing: .02em; }
     .windows { padding: 0 15px; }
     .window { padding: 10px 0; }
-    .window-label { font-size: 11px; }
+    .window-label { font-size: 14px; font-weight: 400; }
     .window-value { font-size: 25px; }
     .usage-rule { height: 3px; margin-top: 8px; }
-    .window-bottom { display: block; margin-top: 6px; font-size: 10px; }
+    .window-bottom { display: block; margin-top: 6px; font-size: 12px; }
     .window-bottom span:first-child { display: none; }
     .window-bottom span:last-child { display: block; text-align: left; }
     .history { min-width: 0; padding: 16px; }
@@ -155,9 +155,9 @@
     .provider-name { font-size: 14px; }
     .windows { padding: 0 11px; }
     .window { padding: 7px 0; }
-    .window-value { font-size: 20px; }
+    .window-value { font-size: 24px; }
     .usage-rule { margin-top: 6px; }
-    .window-bottom { margin-top: 4px; font-size: 9px; }
+    .window-bottom { margin-top: 4px; font-size: 11.5px; }
     .history { padding: 11px; }
     .history-head { margin-bottom: 6px; }
     .chart-shell { min-height: 150px; }
@@ -182,7 +182,7 @@
   .provider { border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:none; }
   .provider-header { align-items:center; padding:13px 18px 12px; border-bottom:1px solid var(--line); }
   .provider-name { font-size:18px; letter-spacing:-.025em; font-weight:650; }
-  .plan { display:inline-flex; align-items:center; font:600 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; letter-spacing:.1em; }
+  .plan { display:inline-flex; align-items:center; font:600 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; letter-spacing:.02em; }
   .plan:empty { display:none; }
   .windows { padding:0 18px; }
   .window { padding:13px 0 12px; }
@@ -244,14 +244,14 @@
     .provider { min-height:0; }
     .provider-header { min-height:36px; padding:8px 14px 6px; }
     .provider-name { font-size:16px; }
-    .plan { max-width:58%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+    .plan { max-width:58%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; letter-spacing:.02em; }
     .windows { padding:0 14px; }
     .window { padding:6px 0; }
     .window-top { align-items:center; gap:6px; }
-    .window-label { font-size:12px; }
-    .window-value { font-size:21px; }
-    .usage-rule { height:6px; margin-top:9px; border-radius:99px; }
-    .window-bottom { display:block; margin-top:5px; font-size:10px; }
+    .window-label { font-size:14px; font-weight:400; }
+    .window-value { font-size:25px; }
+    .usage-rule { height:6px; margin-top:8px; border-radius:99px; }
+    .window-bottom { display:block; margin-top:5px; font-size:12px; }
     .window-bottom span:first-child { display:none; }
     .window-bottom span:last-child { display:block; text-align:left; font-weight:400; }
     .history { display:grid; grid-template-columns:1fr auto; grid-template-rows:auto 1fr; grid-template-areas:"picker controls" "chart chart"; gap:4px 10px; flex:1; min-height:0; border-top:0; padding:0; }
@@ -278,10 +278,10 @@
     main { gap:8px; }
     .updated { font-size:9px; }
     .provider-grid { gap:6px; }
-    .windows { padding:0 9px; }
-    .window { padding:6px 0; }
+    .provider-header, .windows { padding-left:10px; padding-right:10px; }
+    .window { padding:5px 0; }
     .usage-rule { margin-top:6px; }
-    .window-bottom, .window-bottom span { font-size:10px; font-weight:400; }
+    .window-bottom, .window-bottom span { font-size:11.5px; font-weight:400; }
   }</style>
 </head>
 <body>
@@ -439,11 +439,24 @@ function renderChart() {
       elements.push(`<text x="${width - pad.right + 20}" y="${yy + 4}" text-anchor="end" fill="#a6aaa5" font-size="10">${percent}</text>`);
     }
   });
-  const labels = chartHours === 24 ? [0, 4, 8, 12, 16, 20, 24] : [0, 1, 2, 3, 4, 5, 6, 7];
-  labels.forEach(value => {
-    const timestamp = chartHours === 24 ? since + value * 3600 : since + value * 86400;
-    const label = chartHours === 24 ? `${String(value).padStart(2, '0')}:00` : new Date(timestamp * 1000).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
-    elements.push(`<text x="${x(timestamp)}" y="${height - 5}" text-anchor="middle" fill="#727772" font-size="10">${label}</text>`);
+  const ticks = [];
+  if (chartHours === 24) {
+    [0, 4, 8, 12, 16, 20, 24].forEach(value => {
+      const ts = since + value * 3600;
+      const d = new Date(ts * 1000);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      ticks.push({ ts, label: `${hh}:${mm}` });
+    });
+  } else {
+    [0, 1, 2, 3, 4, 5, 6, 7].forEach(value => {
+      const ts = since + value * 86400;
+      const label = new Date(ts * 1000).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+      ticks.push({ ts, label });
+    });
+  }
+  ticks.forEach(({ ts, label }) => {
+    elements.push(`<text x="${x(ts)}" y="${height - 5}" text-anchor="middle" fill="#727772" font-size="10">${label}</text>`);
   });
   keys.forEach(key => {
     const points = historyData[key].filter(point => point[0] >= since && point[0] <= now);
