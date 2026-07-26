@@ -108,12 +108,62 @@ schtasks /create /tn "TokenMonitor" /tr "C:\path\to\token-monitor\start-windows.
 schtasks /delete /tn "TokenMonitor" /f
 ```
 
+## 本機 API
+
+二次開發或串接其他工具可直接打這兩個端點：
+
+### `GET /api/usage`
+
+回傳目前快取的用量快照。加上 `?fresh=1` 會強制重新抓取（受 60 秒冷卻限制）。
+
+```json
+{
+  "claude": {
+    "ok": true,
+    "plan": "claude_max_20x",
+    "windows": [
+      {"id": "5h",     "label": "5 小時", "used_percent": 42.0, "resets_at": 1753560000},
+      {"id": "weekly", "label": "每週",   "used_percent": 18.3, "resets_at": 1753992000}
+    ]
+  },
+  "codex": {
+    "ok": true,
+    "windows": [
+      {"id": "5h",     "label": "5 小時", "used_percent": 5.0,  "resets_at": 1753560000},
+      {"id": "weekly", "label": "每週",   "used_percent": 11.2, "resets_at": 1753992000}
+    ]
+  },
+  "updated_at": 1753556400
+}
+```
+
+`ok: false` 時會有 `error` 欄位說明原因（找不到憑證、網路錯誤等）。`resets_at` 是 Unix timestamp，視 API 回應而定，可能為 `null`。
+
+### `GET /api/history?hours=24`
+
+回傳指定時數內的歷史記錄，預設 24 小時，最長 30 天（720 小時）。
+
+```json
+{
+  "claude:5h":     [[1753550000, 38.0], [1753553000, 41.5], ...],
+  "claude:weekly": [[1753550000, 17.1], [1753553000, 18.3], ...],
+  "codex:5h":      [[1753550000,  4.8], ...],
+  "codex:weekly":  [[1753550000, 11.0], ...]
+}
+```
+
+每筆格式為 `[timestamp, used_percent]`，依時間順序排列。
+
 ## 資料來源
 
 | 來源 | 憑證位置 | 端點 |
 |---|---|---|
 | Claude | macOS：Keychain 的 `Claude Code-credentials`；Windows / Linux：`~/.claude/.credentials.json`（Windows 另相容舊版 Credential Manager） | `api.anthropic.com/api/oauth/usage`（非公開端點，即 Claude Code `/usage` 指令的資料來源） |
 | Codex | `~/.codex/auth.json`（三平台格式一致，Windows 為 `%USERPROFILE%\.codex\auth.json`） | `chatgpt.com/backend-api/wham/usage`（Codex `/status` 的資料來源） |
+
+### 為什麼不用 hook？
+
+Claude Code 與 Codex CLI 都有 hook 機制，可以在每次 tool call 前後觸發腳本。但 hook 只在 CLI 執行中才會觸發，不跑 CLI 的時候就沒有資料，也抓不到 Claude Desktop、網頁版的用量。這個專案的目的是顯示帳號共用的真實剩餘額度，任何時候打開都要能看到，所以選擇直接打用量 API。
 
 ### Windows 注意事項
 
