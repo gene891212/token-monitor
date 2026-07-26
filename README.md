@@ -5,6 +5,8 @@
 
 額度是帳號層級共用的，所以就算主要用桌面版 App，這裡顯示的數字就是你實際的剩餘額度。
 
+![demo](demo.png)
+
 ## 登入需求
 
 - Claude：必須先安裝 Claude Code CLI 並完成登入。Token Monitor 目前只讀取 Claude Code
@@ -38,12 +40,11 @@ uv run menu_bar.py
 
 已內建 Web App Manifest、圖示與 service worker：
 
-- **iOS Safari：**分享 →「加入主畫面」，會有獨立圖示、全螢幕開啟（無網址列）。HTTP 即可。
-- **Android Chrome：**選單 →「加入主畫面」。純 HTTP 只會建一般書籤，開起來仍是帶網址列的瀏覽器分頁；
+- iOS Safari：分享 →「加入主畫面」，會有獨立圖示、全螢幕開啟（無網址列）。HTTP 即可。
+- Android Chrome：選單 →「加入主畫面」。純 HTTP 只會建一般書籤，開起來仍是帶網址列的瀏覽器分頁；
   若要安裝為真正的 standalone PWA，需要 HTTPS（見下方 [HTTPS 段落](#httpsca)）。
-- **離線行為：**斷線時仍可開啟頁面，顯示最後一次成功抓到的數字（需 HTTPS）。
 
-> **Note**
+> **Note**:
 > Android 瀏覽器可以直接使用全螢幕模式，不一定需要安裝 PWA。
 
 ## 開機自動啟動
