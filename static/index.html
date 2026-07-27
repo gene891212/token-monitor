@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fbfbfa">
@@ -30,8 +30,8 @@
     --radius: 18px;
     --shadow: 0 18px 45px rgba(42, 49, 43, .07), 0 2px 4px rgba(42, 49, 43, .04);
   }
-  * { box-sizing: border-box; }
-  html { background: var(--canvas); scroll-behavior: smooth; }
+  * { box-sizing: border-box; touch-action: manipulation; }
+  html { background: var(--canvas); scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
   body {
     max-width: 1240px; min-height: 100dvh; margin: 0 auto; padding: max(32px, env(safe-area-inset-top)) 28px calc(48px + env(safe-area-inset-bottom));
     background: radial-gradient(circle at 92% 4%, rgba(35, 117, 102, .09), transparent 25rem), radial-gradient(circle at 4% 30%, rgba(189, 99, 69, .07), transparent 22rem), var(--canvas); color: var(--ink);
@@ -535,6 +535,16 @@ if ('serviceWorker' in navigator) {
     };
   }).catch(() => {});
 }
+
+// 禁用 Apple 裝置點兩下放大 (Prevent iOS double-tap zoom)
+let lastTouchEnd = 0;
+document.addEventListener('touchend', event => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) {
+    event.preventDefault();
+  }
+  lastTouchEnd = now;
+}, false);
 </script>
 </body>
 </html>
