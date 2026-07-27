@@ -1,0 +1,33 @@
+{
+  "claude": {
+    "ok": true,
+    "plan": "pro",
+    "windows": [
+      {
+        "id": "5h",
+        "label": "5 小時",
+        "used_percent": 4.0,
+        "resets_at": null
+      },
+      {
+        "id": "weekly",
+        "label": "每週",
+        "used_percent": 72.0,
+        "resets_at": 1785240000
+      }
+    ]
+  },
+  "codex": {
+    "ok": true,
+    "plan": "plus",
+    "windows": [
+      {
+        "id": "primary",
+        "label": "每週",
+        "used_percent": 100.0,
+        "resets_at": 1785636266
+      }
+    ]
+  },
+  "updated_at": 1785158620
+}

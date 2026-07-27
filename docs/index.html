@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fbfbfa">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Token Monitor</title>
+<style>
+  :root {
+    --canvas: #f4f2ed;
+    --surface: #fcfbf8;
+    --surface-strong: #ffffff;
+    --ink: #1b2422;
+    --muted: #66716c;
+    --faint: #9ca49f;
+    --line: #dcded6;
+    --claude: #bd6345;
+    --codex: #237566;
+    --safe: #20745d;
+    --warning: #a66a08;
+    --danger: #b7463f;
+    --radius: 18px;
+    --shadow: 0 18px 45px rgba(42, 49, 43, .07), 0 2px 4px rgba(42, 49, 43, .04);
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--canvas); scroll-behavior: smooth; }
+  body {
+    max-width: 1240px; min-height: 100dvh; margin: 0 auto; padding: max(32px, env(safe-area-inset-top)) 28px calc(48px + env(safe-area-inset-bottom));
+    background: radial-gradient(circle at 92% 4%, rgba(35, 117, 102, .09), transparent 25rem), radial-gradient(circle at 4% 30%, rgba(189, 99, 69, .07), transparent 22rem), var(--canvas); color: var(--ink);
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei UI", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; }
+  button:focus-visible { outline: 3px solid rgba(35, 117, 102, .35); outline-offset: 3px; }
+  h1, h2, p { margin: 0; }
+  .app-header { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin: 0 0 48px; }
+  .eyebrow { margin-bottom: 8px; color: var(--codex); font: 700 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; letter-spacing: .16em; text-transform: uppercase; }
+  h1 { font-size: clamp(38px, 6vw, 62px); line-height: .92; letter-spacing: -.07em; font-weight: 700; text-wrap: balance; }
+  .header-copy { max-width: 26rem; padding-bottom: 3px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  .updated { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .refresh {
+    min-height: 40px; padding: 0 16px; border: 1px solid var(--ink); border-radius: 9px;
+    background: var(--ink); color: #fff; cursor: pointer; font-size: 13px; font-weight: 600;
+    transition: transform .2s cubic-bezier(.16,1,.3,1), background .2s cubic-bezier(.16,1,.3,1), box-shadow .2s;
+  }
+  .refresh:hover { background: #34413d; box-shadow: 0 5px 12px rgba(27, 36, 34, .16); transform: translateY(-1px); }
+  .refresh:active { transform: translateY(1px) scale(.98); }
+  .refresh[disabled] { cursor: wait; opacity: .7; }
+  .provider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 16px; margin-bottom: 42px; }
+  .provider { position: relative; border: 1px solid rgba(220, 222, 214, .9); border-radius: var(--radius); background: rgba(252, 251, 248, .86); box-shadow: var(--shadow); overflow: hidden; }
+  .provider::before { position: absolute; top: 0; left: 0; width: 100%; height: 4px; content: ""; background: var(--codex); }
+  #card-claude::before { background: var(--claude); }
+  .provider-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 21px 22px 16px; border-bottom: 1px solid var(--line); }
+  .provider-name { font-size: 20px; letter-spacing: -.04em; font-weight: 700; }
+  .plan { color: var(--muted); font: 600 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; text-transform: uppercase; letter-spacing: .02em; text-align: right; }
+  .windows { padding: 0 22px; }
+  .window { padding: 17px 0 16px; border-bottom: 1px solid var(--line); }
+  .window:last-child { border-bottom: 0; }
+  .window-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .window-label { color: var(--muted); font-size: 13px; font-weight: 400; }
+  .window-value { display: inline-flex; align-items: baseline; gap: .14em; color: var(--ink); font-size: clamp(28px, 3vw, 36px); line-height: .9; font-weight: 650; letter-spacing: 0; }
+  .window-number { letter-spacing: -.045em; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .window-unit { color: var(--muted); font-size: .48em; line-height: 1; font-weight: 600; letter-spacing: 0; }
+  .window-bottom { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .window-bottom span:last-child { overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+  .usage-rule { height: 5px; margin-top: 12px; background: #e8e9e3; border-radius: 99px; overflow: hidden; }
+  .usage-rule > span { display: block; height: 100%; border-radius: inherit; transition: width .6s cubic-bezier(.16,1,.3,1); }
+  .skeleton, .error { padding: 24px 22px; font-size: 14px; line-height: 1.6; }
+  .skeleton { color: var(--muted); }
+  .error { color: var(--danger); }
+  .history { padding: 28px; border: 1px solid rgba(220, 222, 214, .9); border-radius: calc(var(--radius) + 2px); background: rgba(252, 251, 248, .78); box-shadow: var(--shadow); }
+  .history-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 22px; }
+  .history-controls { --control-height: 40px; display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+  h2 { font-size: 22px; line-height: 1.15; letter-spacing: -.045em; font-weight: 700; }
+  .history-note { max-width: 40rem; margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+  .range { display: flex; height: var(--control-height); border: 1px solid var(--line); border-radius: 9px; padding: 3px; background: var(--surface-strong); }
+  .range button { height: 100%; border: 0; border-radius: 6px; padding: 0 11px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; transition: background .2s, color .2s; }
+  .range button:hover { color: var(--ink); background: #f2f2ed; }
+  .range button.active { background: var(--ink); color: #fff; }
+  .series-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .series-picker button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; color: var(--muted); background: var(--surface-strong); cursor: pointer; font-size: 12px; transition: transform .2s, border-color .2s, color .2s, background .2s; }
+  .series-picker button:hover { border-color: var(--faint); color: var(--ink); transform: translateY(-1px); }
+  .series-picker button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: #f2f4ef; }
+  .series-mark { width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255,255,255,.75); }
+  .chart-shell { position: relative; min-height: 302px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-strong); padding: 16px 14px 10px; overflow: hidden; }
+  #chart { width: 100%; height: 272px; display: block; overflow: visible; touch-action: pan-y; }
+  .chart-tooltip { position: absolute; z-index: 1; display: none; min-width: 142px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.97); color: var(--ink); box-shadow: 0 10px 22px rgba(32,35,33,.12); font-size: 12px; line-height: 1.55; pointer-events: none; }
+  .chart-tooltip strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .chart-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+  .chart-caption { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+  .chart-caption span:last-child { text-align: right; }
+  @media (max-width: 680px) {
+    body { padding: max(24px, env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); }
+    .app-header { align-items: flex-start; flex-direction: column; gap: 15px; margin-bottom: 32px; }
+    .header-copy { max-width: 32rem; }
+    .provider-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 28px; }
+    .provider-header, .windows { padding-left: 18px; padding-right: 18px; }
+    .history { padding: 20px 16px; }
+    .history-head { align-items: flex-start; flex-direction: column; }
+    .history-controls { width: 100%; justify-content: space-between; }
+    .chart-shell { min-height: 264px; padding: 12px 8px 7px; }
+    #chart { height: 240px; }
+  }
+  /* 橫屏採用左右工作區，保留捲動而非強制裁切內容。 */
+  @media (orientation: landscape) and (max-height: 500px) {
+    body { max-width: none; min-height: 100dvh; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+    .app-header { align-items: center; flex-direction: row; gap: 18px; margin-bottom: 16px; }
+    .eyebrow, .header-copy { display: none; }
+    h1 { font-size: clamp(25px, 4vw, 34px); }
+    main { display: grid; grid-template-columns: minmax(410px, 1.18fr) minmax(0, 1.35fr); align-items: start; gap: 14px; }
+    .provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px; margin: 0; }
+    .provider-header { padding: 13px 15px 11px; }
+    .provider-name { font-size: 16px; }
+    .plan { max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; letter-spacing: .02em; }
+    .windows { padding: 0 15px; }
+    .window { padding: 10px 0; }
+    .window-label { font-size: 14px; font-weight: 400; }
+    .window-value { font-size: 25px; }
+    .usage-rule { height: 3px; margin-top: 8px; }
+    .window-bottom { display: block; margin-top: 6px; font-size: 12px; }
+    .window-bottom span:first-child { display: none; }
+    .window-bottom span:last-child { display: block; text-align: left; }
+    .history { min-width: 0; padding: 16px; }
+    .history-head { align-items: center; flex-direction: row; gap: 12px; margin-bottom: 10px; }
+    .history-head h2 { font-size: 16px; }
+    .history-controls { --control-height: 32px; gap: 6px; flex-wrap: nowrap; }
+    .history-note { display: none; }
+    .range { padding: 2px; }
+    .range button { padding: 0 7px; font-size: 10px; }
+    .refresh { min-height: var(--control-height); padding: 0 10px; font-size: 11px; }
+    .updated { display: none; }
+    .series-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-bottom: 8px; overflow: visible; white-space: normal; }
+    .series-picker button { gap: 4px; min-width: 0; max-width: none; padding: 4px 6px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .series-mark { width: 5px; height: 5px; flex: none; }
+    .chart-shell { min-height: 190px; padding: 8px 7px 2px; }
+    #chart { height: 180px; min-height: 0; }
+    .chart-caption { display: none; }
+    .chart-tooltip { min-width: 124px; padding: 6px 7px; font-size: 10px; }
+    .chart-tooltip strong { font-size: 12px; }
+  }
+  @media (orientation: landscape) and (max-height: 380px) {
+    body { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+    .app-header { margin-bottom: 10px; }
+    main { gap: 10px; }
+    .provider-grid { gap: 8px; }
+    .provider-header { padding: 9px 11px; }
+    .provider-name { font-size: 14px; }
+    .windows { padding: 0 11px; }
+    .window { padding: 7px 0; }
+    .window-value { font-size: 24px; }
+    .usage-rule { margin-top: 6px; }
+    .window-bottom { margin-top: 4px; font-size: 11.5px; }
+    .history { padding: 11px; }
+    .history-head { margin-bottom: 6px; }
+    .chart-shell { min-height: 150px; }
+    #chart { height: 142px; }
+  }
+  @media (orientation: landscape) and (max-height: 500px) and (max-width: 650px) {
+    main { grid-template-columns: 1fr; gap: 12px; }
+    .provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .history-title { display: none; }
+    .history-controls { width: 100%; justify-content: flex-end; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
+
+  /* Restored interface treatment. */
+  :root { --canvas:#f1f3f0; --surface:#fff; --ink:#202321; --muted:#68716b; --faint:#9fa7a1; --line:#dde1da; --claude:#c96c47; --codex:#207b6d; --safe:#12946b; --warning:#c76d03; --danger:#d2453c; --radius:12px; }
+  html { background:var(--canvas); }
+  body { max-width:1080px; min-height:0; margin:0 auto; padding:max(28px, env(safe-area-inset-top)) 24px calc(36px + env(safe-area-inset-bottom)); background:var(--canvas); color:var(--ink); }
+  .app-header { display:block; margin-bottom:42px; }
+  .eyebrow, .header-copy, .provider::before { display:none; }
+  h1 { font-size:clamp(30px, 5vw, 42px); line-height:1; letter-spacing:-.055em; font-weight:650; }
+  .provider-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-bottom:28px; }
+  .provider { border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:none; }
+  .provider-header { align-items:center; padding:13px 18px 12px; border-bottom:1px solid var(--line); }
+  .provider-name { font-size:18px; letter-spacing:-.025em; font-weight:650; }
+  .plan { display:inline-flex; align-items:center; font:600 10px/1 ui-monospace, "SFMono-Regular", Consolas, monospace; letter-spacing:.02em; }
+  .plan:empty { display:none; }
+  .windows { padding:0 18px; }
+  .window { padding:13px 0 12px; }
+  .window-label { font-size:13px; font-weight:400; }
+  .window-value { font-size:27px; line-height:1; font-weight:600; letter-spacing:0; }
+  .window-number { letter-spacing:-.035em; }
+  .window-bottom { margin-top:7px; font-size:12px; }
+  .usage-rule { height:4px; margin-top:9px; background:#edefe9; border-radius:99px; }
+  .usage-rule > span { border-radius:inherit; }
+  .skeleton, .error { padding:20px; font-size:14px; text-align:center; }
+  .history { padding:20px 0 0; border:0; border-top:1px solid var(--ink); border-radius:0; background:transparent; box-shadow:none; }
+  .history-head { gap:16px; margin-bottom:18px; }
+  .history-controls { --control-height:36px; --control-radius:8px; display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+  h2 { font-size:19px; line-height:1.15; letter-spacing:-.035em; font-weight:650; }
+  .history-note { margin-top:5px; font-size:13px; line-height:normal; }
+  .range { display:flex; align-items:stretch; height:var(--control-height); border:1px solid var(--line); border-radius:var(--control-radius); padding:3px; background:#e8ebe5; flex:none; }
+  .range button { position:relative; min-width:64px; height:100%; border:0; border-radius:calc(var(--control-radius) - 3px); padding:0 8px; background:transparent; color:var(--muted); cursor:pointer; font-size:13px; transition:color .18s, background .18s, transform .18s; }
+  .range button:hover { color:var(--ink); background:rgba(255,255,255,.55); }
+  .range button.active { background:var(--surface); color:var(--ink); font-weight:700; box-shadow:0 1px 2px rgba(32,35,33,.08); }
+  .range button:active { background:var(--surface); transform:scale(.98); }
+  .refresh, .fullscreen-btn { display:inline-flex; align-items:center; justify-content:center; width:var(--control-height); height:var(--control-height); min-height:0; padding:0; border:1px solid var(--line); border-radius:var(--control-radius); background:var(--surface); color:var(--muted); cursor:pointer; flex:none; box-shadow:0 1px 2px rgba(32,35,33,.025); transition:background .2s, border-color .2s, color .2s; }
+  .refresh:hover, .fullscreen-btn:hover { border-color:var(--faint); background:#e8ebe5; color:var(--ink); box-shadow:none; }
+  .refresh:active, .fullscreen-btn:active { background:#e2e5de; transform:scale(.95); }
+  .refresh svg, .fullscreen-btn svg { width:13px; height:13px; flex:none; }
+  .refresh.spinning svg { animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .series-picker { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .series-picker button { position:relative; gap:7px; border:1px solid var(--line); border-radius:6px; padding:7px 10px; background:var(--surface); font-size:12px; }
+  .series-picker button:hover { border-color:var(--faint); color:var(--ink); transform:none; }
+  .series-picker button[aria-pressed="true"] { border-color:color-mix(in srgb, var(--series-color) 42%, var(--line)); color:var(--ink); background:color-mix(in srgb, var(--series-color) 7%, var(--surface)); }
+  .series-mark { width:7px; height:7px; box-shadow:none; }
+  .chart-shell { min-height:258px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); padding:12px 10px 8px; overflow:visible; }
+  #chart { height:230px; }
+  .chart-tooltip { border-radius:7px; background:#fff; box-shadow:0 8px 18px rgba(32,35,33,.08); }
+  .chart-caption { margin-top:10px; font-size:12px; }
+  @media (max-width:680px) {
+    body { padding-left:16px; padding-right:16px; }
+    .app-header { margin-bottom:30px; }
+    .provider-grid { grid-template-columns:1fr; gap:12px; margin-bottom:28px; }
+    .provider-header, .windows { padding-left:16px; padding-right:16px; }
+    .history { padding:20px 0 0; }
+    .history-head { align-items:flex-start; flex-direction:column; gap:10px; }
+    .history-controls { --control-height:34px; --control-radius:8px; width:100%; justify-content:space-between; gap:6px; flex-wrap:nowrap; }
+    .range button { min-width:54px; padding:0 8px; font-size:13px; }
+    .updated { font-size:12px; }
+    .chart-shell { min-height:246px; }
+    #chart { height:216px; }
+  }
+  @media (orientation:landscape) and (max-height:600px) {
+    html, body { height:100%; overflow:hidden; }
+    body { display:flex; flex-direction:column; max-width:none; height:100dvh; min-height:0; padding:max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+    .app-header { display:none; }
+    .updated { font-size:10px; }
+    .history-controls { --control-height:26px; --control-radius:6px; gap:6px; }
+    .refresh { width:auto; height:var(--control-height); min-height:0; padding:0 8px; font-size:10px; }
+    main { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; align-items:stretch; width:100%; }
+    .provider-grid { display:flex !important; flex-direction:row; flex:none; min-height:0; gap:12px; margin:0; align-items:stretch; }
+    .provider-grid .provider { flex:1; display:flex; flex-direction:column; }
+    .provider { min-height:0; }
+    .provider-header { min-height:36px; padding:8px 14px 6px; }
+    .provider-name { font-size:16px; }
+    .plan { max-width:58%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; letter-spacing:.02em; }
+    .windows { padding:0 14px; }
+    .window { padding:6px 0; }
+    .window-top { align-items:center; gap:6px; }
+    .window-label { font-size:14px; font-weight:400; }
+    .window-value { font-size:25px; }
+    .usage-rule { height:6px; margin-top:8px; border-radius:99px; }
+    .window-bottom { display:block; margin-top:5px; font-size:12px; }
+    .window-bottom span:first-child { display:none; }
+    .window-bottom span:last-child { display:block; text-align:left; font-weight:400; }
+    .history { display:grid; grid-template-columns:1fr auto; grid-template-rows:auto 1fr; grid-template-areas:"picker controls" "chart chart"; gap:4px 10px; flex:1; min-height:0; border-top:0; padding:0; }
+    .history-head { display:contents; }
+    .history-title { display:none; }
+    .history-controls { grid-area:controls; width:auto; gap:6px; flex-wrap:nowrap; padding:0; border:0; border-radius:0; background:transparent; align-items:center; }
+    .history-note { display:none; }
+    .range { height:var(--control-height); padding:2px; }
+    .range button { min-width:48px; border-radius:calc(var(--control-radius) - 2px); padding:0 6px; font-size:10px; }
+    .updated { display:block; color:var(--muted); font-size:10px; white-space:nowrap; }
+    .refresh, .fullscreen-btn { width:24px; height:24px; padding:0; border-radius:5px; }
+    .refresh svg, .fullscreen-btn svg { width:11px; height:11px; }
+    .series-picker { grid-area:picker; display:flex; flex-direction:row; align-items:center; gap:5px; margin-bottom:0; overflow:hidden; white-space:nowrap; flex:1; min-width:0; }
+    .series-picker:empty { display:none; }
+    .series-picker button { display:inline-flex; align-items:center; gap:4px; width:auto; max-width:135px; padding:3px 8px; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-radius:5px; }
+    .series-mark { width:5px; height:5px; flex:none; }
+    .chart-shell { grid-area:chart; flex:1; min-height:0; height:100%; min-width:0; padding:5px 8px 3px; }
+    #chart { height:100%; width:100%; min-height:60px; }
+    .chart-caption { display:none; }
+    .chart-tooltip { min-width:124px; padding:6px 7px; font-size:10px; }
+    .chart-tooltip strong { font-size:12px; }
+  }
+  @media (orientation:landscape) and (max-height:460px) {
+    main { gap:8px; }
+    .updated { font-size:9px; }
+    .provider-grid { gap:6px; }
+    .provider-header, .windows { padding-left:10px; padding-right:10px; }
+    .window { padding:5px 0; }
+    .usage-rule { margin-top:6px; }
+    .window-bottom, .window-bottom span { font-size:11.5px; font-weight:400; }
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Token Monitor <span id="mock-tag" style="display:inline-block; font-size:13px; padding:3px 10px; border-radius:12px; background:rgba(234,179,8,0.15); color:#b45309; font-weight:600; border:1px solid rgba(234,179,8,0.3); vertical-align:middle; margin-left:10px; letter-spacing: normal;">GitHub Pages 示範模式</span></h1>
+  </header>
+
+  <main>
+    <section class="provider-grid" aria-label="目前用量">
+      <article class="provider" id="card-claude">
+        <div class="provider-header"><h2 class="provider-name">Claude</h2><span class="plan" id="plan-claude"></span></div>
+        <div class="windows" id="body-claude"><p class="skeleton">正在讀取 Claude 用量</p></div>
+      </article>
+      <article class="provider" id="card-codex">
+        <div class="provider-header"><h2 class="provider-name">Codex</h2><span class="plan" id="plan-codex"></span></div>
+        <div class="windows" id="body-codex"><p class="skeleton">正在讀取 Codex 用量</p></div>
+      </article>
+    </section>
+
+    <section class="history" aria-labelledby="history-title">
+      <div class="history-head">
+        <div class="history-title">
+          <h2 id="history-title">用量變化</h2>
+          <p class="history-note">選擇要比較的額度視窗，查看累積用量。</p>
+        </div>
+        <div class="history-controls">
+          <div class="range" aria-label="歷史時間範圍">
+            <button type="button" data-hours="24" aria-pressed="false">24 小時</button>
+            <button type="button" data-hours="168" class="active" aria-pressed="true">7 天</button>
+          </div>
+          <span class="updated" id="updated" aria-live="polite">正在取得最新用量</span>
+          <button class="refresh" id="refresh" type="button" aria-label="更新用量" title="更新用量">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 1-15.3 6.4"/>
+              <path d="M3 12a9 9 0 0 1 15.3-6.4"/>
+              <path d="M17.6 3.6v4.4H13.2M6.4 20.4V16H10.8"/>
+            </svg>
+          </button>
+          <button class="fullscreen-btn" id="fullscreen-btn" type="button" aria-label="切換全螢幕" title="切換全螢幕">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="series-picker" id="series-picker" aria-label="圖表數列"></div>
+      <div class="chart-shell" id="chart-shell">
+        <svg id="chart" role="img" aria-label="用量歷史折線圖"></svg>
+        <div class="chart-tooltip" id="chart-tooltip" role="status"></div>
+        <div class="chart-empty" id="chart-empty">尚無足夠的歷史資料</div>
+      </div>
+      <div class="chart-caption"><span>0% 已用</span><span>100% 已用</span></div>
+    </section>
+  </main>
+
+<script>
+// 展示頁:把 /api/* 導向靜態快照,並把時間軸平移到「現在」,讓圖表永遠有資料。
+(function () {
+  let snapshot = null;
+  async function load() {
+    if (snapshot) return snapshot;
+    const [usage, history] = await Promise.all([
+      fetch('usage.json').then(r => r.json()),
+      fetch('history.json').then(r => r.json()),
+    ]);
+    let anchor = usage.updated_at || 0;
+    for (const points of Object.values(history)) {
+      const last = points[points.length - 1];
+      if (last && last[0] > anchor) anchor = last[0];
+    }
+    const offset = Math.floor(Date.now() / 1000) - anchor;
+    for (const points of Object.values(history)) {
+      for (const point of points) point[0] += offset;
+    }
+    if (usage.updated_at) usage.updated_at += offset;
+    for (const provider of ['claude', 'codex']) {
+      ((usage[provider] || {}).windows || []).forEach(w => { if (w.resets_at) w.resets_at += offset; });
+    }
+    snapshot = { usage, history };
+    return snapshot;
+  }
+  const reply = data => new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = String((input && input.url) || input);
+    if (url.includes('/api/usage')) return reply((await load()).usage);
+    if (url.includes('/api/history')) {
+      const hours = Number(new URL(url, location.href).searchParams.get('hours')) || 168;
+      const since = Math.floor(Date.now() / 1000) - hours * 3600;
+      const history = (await load()).history;
+      const out = {};
+      for (const [key, points] of Object.entries(history)) out[key] = points.filter(p => p[0] >= since);
+      return reply(out);
+    }
+    return original(input, init);
+  };
+})();
+</script>
+<script>
+const $ = id => document.getElementById(id);
+let chartHours = 168;
+let historyData = {};
+let activeSeries = new Set();
+let currentWindowKeys = new Set();
+const seriesStyles = {
+  'claude:5h': { color: '#b45132', dash: '' },
+  'claude:weekly': { color: '#7a5b9a', dash: '8 5' },
+  'claude:weekly_scoped': { color: '#8a7000', dash: '2 4' },
+  'codex:primary': { color: '#207b6d', dash: '' },
+  'codex:weekly': { color: '#207b6d', dash: '' },
+};
+function styleForSeries(key) {
+  return seriesStyles[key] || { color: key.startsWith('claude:') ? '#c96c47' : '#207b6d', dash: '' };
+}
+function seriesRank(key) {
+  const ranks = {
+    'claude:5h': 0,
+    'claude:weekly': 1,
+    'claude:weekly_scoped': 2,
+    'codex:primary': 3,
+    'codex:weekly': 3,
+  };
+  return ranks[key] ?? (key.startsWith('claude:') ? 10 : 20);
+}
+function orderedSeriesKeys() {
+  return Object.keys(historyData)
+    .filter(key => !currentWindowKeys.size || currentWindowKeys.has(key))
+    .sort((a, b) => seriesRank(a) - seriesRank(b) || a.localeCompare(b));
+}
+
+function usageColor(percent) {
+  return percent >= 85 ? 'var(--danger)' : percent >= 60 ? 'var(--warning)' : 'var(--safe)';
+}
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
+}
+function resetText(resetsAt) {
+  if (!resetsAt) return '重置時間未知';
+  const left = resetsAt - Math.floor(Date.now() / 1000);
+  if (left <= 0) return '等待重置資料更新';
+  const days = Math.floor(left / 86400), hours = Math.floor(left % 86400 / 3600), minutes = Math.floor(left % 3600 / 60);
+  const remaining = days ? `${days} 天 ${hours} 小時後` : hours ? `${hours} 小時 ${minutes} 分後` : `${minutes} 分後`;
+  const date = new Date(resetsAt * 1000).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${remaining}重置 (${date})`;
+}
+function renderProvider(name, data) {
+  const body = $('body-' + name), plan = $('plan-' + name);
+  if (!data) { body.innerHTML = '<p class="skeleton">等待服務回應</p>'; return; }
+  if (!data.ok) { plan.textContent = ''; body.innerHTML = `<p class="error">${escapeHtml(data.error || '無法讀取用量')}</p>`; return; }
+  plan.textContent = data.plan || '';
+  body.innerHTML = (data.windows || []).map(window => {
+    const value = Math.max(0, Math.min(Number(window.used_percent) || 0, 100));
+    return `<div class="window">
+      <div class="window-top"><span class="window-label">${escapeHtml(window.label)}</span><strong class="window-value" aria-label="${value}%" style="color:${usageColor(value)}"><span class="window-number">${value}</span><span class="window-unit" aria-hidden="true">%</span></strong></div>
+      <div class="usage-rule" aria-label="${escapeHtml(window.label)} 已用 ${value}%"><span style="width:${value}%;background:${usageColor(value)}"></span></div>
+      <div class="window-bottom"><span>已用額度</span><span>${escapeHtml(resetText(window.resets_at))}</span></div>
+    </div>`;
+  }).join('') || '<p class="skeleton">沒有可顯示的額度視窗</p>';
+}
+function displayName(key) {
+  const [provider, id] = key.split(':');
+  const names = { primary: '每週額度', weekly: '每週額度', weekly_scoped: '每週模型額度', '5h': '5 小時額度' };
+  return `${provider === 'claude' ? 'Claude' : 'Codex'} ${names[id] || id}`;
+}
+function renderPicker() {
+  const picker = $('series-picker');
+  const keys = orderedSeriesKeys().filter(key => historyData[key]?.length);
+  if (!keys.length) { picker.innerHTML = ''; return; }
+  if (!activeSeries.size) keys.forEach(key => activeSeries.add(key));
+  picker.innerHTML = keys.map(key => {
+    const style = styleForSeries(key); const selected = activeSeries.has(key);
+    return `<button type="button" data-series="${escapeHtml(key)}" style="--series-color:${style.color}" aria-pressed="${selected}"><i class="series-mark" style="background:${style.color}"></i>${escapeHtml(displayName(key))}</button>`;
+  }).join('');
+  picker.querySelectorAll('button').forEach(button => button.onclick = () => {
+    const key = button.dataset.series;
+    activeSeries.has(key) ? activeSeries.delete(key) : activeSeries.add(key);
+    renderPicker(); renderChart();
+  });
+}
+function renderChart() {
+  const svg = $('chart'), empty = $('chart-empty');
+  const keys = orderedSeriesKeys().filter(key => activeSeries.has(key) && historyData[key]?.length);
+  const rect = svg.getBoundingClientRect(); const width = Math.max(280, Math.round(rect.width || 600)); const height = Math.max(60, Math.round(rect.height || 180));
+  const pad = { left: 26, right: 26, top: 10, bottom: 20 };
+  const now = Math.floor(Date.now() / 1000), since = now - chartHours * 3600;
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = '';
+  empty.style.display = keys.length ? 'none' : 'grid';
+  if (!keys.length) return;
+  const x = timestamp => pad.left + (width - pad.left - pad.right) * ((timestamp - since) / (now - since));
+  const y = percent => pad.top + (height - pad.top - pad.bottom) * (1 - Math.max(0, Math.min(percent, 100)) / 100);
+  const elements = [];
+  [0, 25, 50, 75, 100].forEach(percent => {
+    const yy = y(percent); elements.push(`<line x1="${pad.left}" y1="${yy}" x2="${width-pad.right}" y2="${yy}" stroke="#e6e7e3" stroke-width="1"/>`);
+    if (percent === 0 || percent === 50 || percent === 100) {
+      elements.push(`<text x="${pad.left - 8}" y="${yy + 4}" text-anchor="end" fill="#727772" font-size="10">${percent}</text>`);
+      elements.push(`<text x="${width - pad.right + 20}" y="${yy + 4}" text-anchor="end" fill="#a6aaa5" font-size="10">${percent}</text>`);
+    }
+  });
+  const ticks = [];
+  if (chartHours === 24) {
+    [0, 4, 8, 12, 16, 20, 24].forEach(value => {
+      const ts = since + value * 3600;
+      const d = new Date(ts * 1000);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      ticks.push({ ts, label: `${hh}:${mm}` });
+    });
+  } else {
+    [0, 1, 2, 3, 4, 5, 6, 7].forEach(value => {
+      const ts = since + value * 86400;
+      const label = new Date(ts * 1000).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+      ticks.push({ ts, label });
+    });
+  }
+  ticks.forEach(({ ts, label }) => {
+    elements.push(`<text x="${x(ts)}" y="${height - 5}" text-anchor="middle" fill="#727772" font-size="10">${label}</text>`);
+  });
+  keys.forEach(key => {
+    const points = historyData[key].filter(point => point[0] >= since && point[0] <= now);
+    if (!points.length) return;
+    const style = styleForSeries(key);
+    const path = points.map((point, index) => `${index ? 'L' : 'M'}${x(point[0]).toFixed(1)},${y(point[1]).toFixed(1)}`).join(' ');
+    elements.push(`<path d="${path}" fill="none" stroke="${style.color}" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"${style.dash ? ` stroke-dasharray="${style.dash}"` : ''}/> `);
+  });
+  svg.innerHTML = elements.join('');
+  svg.onpointermove = event => showTooltip(event, keys, { x, y, since, now, width, pad });
+  svg.onpointerleave = () => $('chart-tooltip').style.display = 'none';
+}
+function showTooltip(event, keys, map) {
+  const svg = $('chart'), shell = $('chart-shell'), tooltip = $('chart-tooltip');
+  const rect = svg.getBoundingClientRect(); const position = Math.max(0, Math.min(1, (event.clientX - rect.left - map.pad.left) / (rect.width - map.pad.left - map.pad.right)));
+  const timestamp = map.since + position * (map.now - map.since);
+  const values = keys.map(key => {
+    const points = historyData[key].filter(point => point[0] >= map.since && point[0] <= map.now);
+    return { key, point: points.reduce((closest, point) => !closest || Math.abs(point[0] - timestamp) < Math.abs(closest[0] - timestamp) ? point : closest, null) };
+  }).filter(item => item.point);
+  if (!values.length) return;
+  const date = new Date(timestamp * 1000).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+  tooltip.innerHTML = `<span>${date}</span>${values.map(item => `<br><strong style="color:${styleForSeries(item.key).color}">${item.point[1]}%</strong> ${escapeHtml(displayName(item.key))}`).join('')}`;
+  tooltip.style.display = 'block';
+  const shellRect = shell.getBoundingClientRect(); const left = Math.min(shellRect.width - 150, Math.max(8, event.clientX - shellRect.left + 12));
+  tooltip.style.left = `${left}px`; tooltip.style.top = '18px';
+}
+let staticRawHistory = null;
+
+function processStaticHistory(raw) {
+  if (!raw) return {};
+  const keys = Object.keys(raw);
+  let maxTs = 0;
+  keys.forEach(k => {
+    if (raw[k] && raw[k].length) {
+      const last = raw[k][raw[k].length - 1][0];
+      if (last > maxTs) maxTs = last;
+    }
+  });
+
+  if (!maxTs) return raw;
+  const now = Math.floor(Date.now() / 1000);
+  const offset = now - maxTs;
+
+  const res = {};
+  keys.forEach(k => {
+    res[k] = (raw[k] || []).map(([ts, val]) => [ts + offset, val]);
+  });
+  return res;
+}
+
+function getLatestValue(data, key, fallback) {
+  if (data && data[key] && data[key].length) {
+    return Math.round(data[key][data[key].length - 1][1]);
+  }
+  return fallback;
+}
+
+function getUsageDataFromHistory(history) {
+  const now = Math.floor(Date.now() / 1000);
+  const claude5h = getLatestValue(history, 'claude:5h', 96);
+  const claudeWeekly = getLatestValue(history, 'claude:weekly', 72);
+  const codexPrimary = getLatestValue(history, 'codex:primary', 100);
+
+  return {
+    updated_at: now,
+    claude: {
+      ok: true,
+      plan: "Max",
+      windows: [
+        { id: "5h", label: "5 小時額度", used_percent: claude5h, resets_at: now + 4200 },
+        { id: "weekly", label: "每週額度", used_percent: claudeWeekly, resets_at: now + 276400 }
+      ]
+    },
+    codex: {
+      ok: true,
+      plan: "Plus",
+      windows: [
+        { id: "primary", label: "5 小時額度", used_percent: codexPrimary, resets_at: now + 1800 }
+      ]
+    }
+  };
+}
+
+function applyUsageData(data) {
+  currentWindowKeys.clear();
+  if (data.claude?.windows) data.claude.windows.forEach(w => currentWindowKeys.add(`claude:${w.id}`));
+  if (data.codex?.windows) data.codex.windows.forEach(w => currentWindowKeys.add(`codex:${w.id}`));
+  renderProvider('claude', data.claude);
+  renderProvider('codex', data.codex);
+  $('updated').textContent = `示範數據 ${new Date(data.updated_at * 1000).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  if (Object.keys(historyData).length) { renderPicker(); renderChart(); }
+}
+
+async function loadHistory() {
+  try {
+    if (!staticRawHistory) {
+      const resp = await fetch('history.json');
+      if (resp.ok) {
+        staticRawHistory = await resp.json();
+      }
+    }
+    if (staticRawHistory) {
+      historyData = processStaticHistory(staticRawHistory);
+    }
+  } catch (e) {
+    console.warn('Could not load history.json:', e);
+  }
+  renderPicker();
+  renderChart();
+}
+
+async function loadUsage(fresh) {
+  const data = getUsageDataFromHistory(historyData || staticRawHistory);
+  applyUsageData(data);
+}
+
+document.querySelectorAll('.range button').forEach(button => button.onclick = () => {
+  chartHours = Number(button.dataset.hours);
+  document.querySelectorAll('.range button').forEach(item => { const current = item === button; item.classList.toggle('active', current); item.setAttribute('aria-pressed', String(current)); });
+  loadHistory();
+});
+$('refresh').onclick = async () => {
+  const button = $('refresh'); button.disabled = true; button.classList.add('spinning');
+  await loadHistory(); await loadUsage(true); button.disabled = false; button.classList.remove('spinning');
+};
+$('fullscreen-btn').onclick = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else if (document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+};
+window.addEventListener('resize', renderChart);
+loadHistory().then(() => loadUsage(true));
+setInterval(() => loadUsage(false), 60000);
+setInterval(loadHistory, 300000);
+</script>
+</body>
+</html>
